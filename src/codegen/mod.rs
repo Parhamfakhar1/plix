@@ -1,0 +1,54 @@
+pub mod ir;
+pub mod machine_code;
+pub mod bytecode;
+
+pub use self::ir::{IRGenerator, Instruction, Operand};
+pub use self::machine_code::{MachineCodeGenerator, TargetArchitecture};
+pub use self::bytecode::{BytecodeGenerator, Bytecode, OpCode};
+
+use crate::parser::ast::{Program, Statement, Expression};
+use crate::utils::error::{CompilerResult, CompilerError};
+use crate::utils::position::Span;
+
+pub trait CodeGenerator {
+    fn generate_program(&mut self, program: &Program) -> CompilerResult<()>;
+    fn generate_statement(&mut self, stmt: &Statement) -> CompilerResult<()>;
+    fn generate_expression(&mut self, expr: &Expression) -> CompilerResult<()>;
+}
+
+/// Code generation pipeline that runs multiple generators in sequence
+pub struct CodeGenerationPipeline {
+    generators: Vec<Box<dyn CodeGenerator>>,
+}
+
+impl CodeGenerationPipeline {
+    pub fn new() -> Self {
+        Self {
+            generators: Vec::new(),
+        }
+    }
+
+    pub fn add_generator(&mut self, generator: Box<dyn CodeGenerator>) {
+        self.generators.push(generator);
+    }
+
+    pub fn generate(&mut self, program: &Program) -> CompilerResult<()> {
+        for generator in &mut self.generators {
+            generator.generate_program(program)?;
+        }
+        Ok(())
+    }
+}
+
+impl Default for CodeGenerationPipeline {
+    fn default() -> Self {
+        let mut pipeline = Self::new();
+        
+        // Add code generators in order
+        pipeline.add_generator(Box::new(IRGenerator::new()));
+        pipeline.add_generator(Box::new(BytecodeGenerator::new()));
+        pipeline.add_generator(Box::new(MachineCodeGenerator::new(TargetArchitecture::X86_64)));
+        
+        pipeline
+    }
+}

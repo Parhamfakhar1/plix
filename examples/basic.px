@@ -1,0 +1,10 @@
+name = "Alice"
+age = 25
+price = 19.99
+numbers = [1, 2, 3]
+
+def greet(person):
+    return "Hello, ${person}!"
+
+if age >= 18:
+    print("Adult")
