@@ -17,7 +17,6 @@ use parser::Parser;
 use lexer::Lexer;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize the compiler pipeline
     let mut lexer = Lexer::new("");
     let mut parser = Parser::new(lexer);
     let mut type_checker = TypeChecker::new();
@@ -25,15 +24,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut code_generator = CodeGenerationPipeline::default();
     let mut vm_env = VirtualMachineEnvironment::new();
     
-    // Check if a file path was provided as an argument
     let args: Vec<String> = std::env::args().collect();
     let input_path = if args.len() > 1 {
         &args[1]
     } else {
-        "examples/basic.px" // Default example file
+        "examples/basic.px"
     };
     
-    // Read the input file
     let mut source = String::new();
     if Path::new(input_path).exists() {
         let mut file = File::open(input_path)?;
@@ -45,9 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("Error: File '{}' not found. Using default program.", input_path);
         println!("=====================================");
         
-        // Default program if no file is found
         source = r#"
-        // Example program demonstrating various features
         let x = 10;
         let y = 20;
         let sum = x + y;
@@ -64,17 +59,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "#.to_string();
     }
     
-    // Lexing phase
     println!("1. Lexing...");
     let mut lexer = Lexer::new(&source);
     let tokens = lexer.lex()?;
     
-    // Parsing phase
     println!("2. Parsing...");
     let mut parser = Parser::new(lexer);
     let program = parser.parse(tokens)?;
     
-    // Type checking phase
     println!("3. Type checking...");
     type_checker.check_program(&program)?;
     
@@ -86,19 +78,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("Type checking failed".into());
     }
     
-    // Optimization phase
     println!("4. Optimizing...");
     optimizer.optimize(&mut program.clone())?;
     
-    // Code generation phase
     println!("5. Code generation...");
     code_generator.generate(&program)?;
     
-    // Virtual machine execution
     println!("6. Executing...");
     vm_env.load_program(&program)?;
     
-    // Execute synchronously
     match vm_env.execute() {
         Ok(()) => {
             println!("Execution completed successfully!");
@@ -109,7 +97,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
-    // Print execution statistics
     println!("=====================================");
     println!("Execution statistics:");
     println!("  - Memory usage: {} bytes", vm_env.get_memory_usage());

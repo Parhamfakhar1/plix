@@ -10,7 +10,6 @@ use crate::parser::ast::Program;
 use crate::utils::error::{CompilerResult, CompilerError};
 use crate::utils::position::Span;
 
-/// Main virtual machine interface that coordinates execution
 pub struct VirtualMachineEnvironment {
     vm: VirtualMachine,
     gc: GarbageCollector,
@@ -29,10 +28,8 @@ impl VirtualMachineEnvironment {
     }
 
     pub fn load_program(&mut self, program: &Program) -> CompilerResult<()> {
-        // First compile the program to bytecode
         self.vm.compile(program)?;
         
-        // Initialize the runtime environment
         self.runtime.initialize(program)?;
         
         Ok(())
@@ -45,7 +42,6 @@ impl VirtualMachineEnvironment {
 
         self.state = VMState::Running;
         
-        // Run the garbage collector periodically
         let gc_result = self.vm.execute_with_gc(&mut self.gc, |vm| {
             vm.execute()
         });
@@ -69,7 +65,6 @@ impl VirtualMachineEnvironment {
 
         self.state = VMState::Running;
         
-        // Run the virtual machine with async support
         let result = self.vm.execute_async(&mut self.runtime, &mut self.gc);
         
         match result {

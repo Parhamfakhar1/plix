@@ -53,10 +53,8 @@ impl Parser {
             self.parse_return()
                 .map(|stmt| Some(stmt))
         } else if self.check(TokenKind::Identifier("".to_string())) {
-            // Try parsing as variable declaration or expression
             self.parse_possible_assignment()
         } else {
-            // Expression statement
             self.parse_expression()
                 .map(|expr| Some(Statement::Expression(expr)))
         }
@@ -197,11 +195,9 @@ impl Parser {
     }
     
     fn parse_possible_assignment(&mut self) -> CompilerResult<Option<Statement>> {
-        // Try to parse as assignment
         let name = self.expect_identifier("identifier")?;
         
         if self.match_token(TokenKind::Assign) {
-            // Variable declaration without mut/const
             let value = self.parse_expression()?;
             Ok(Some(Statement::Variable {
                 mutable: false,
@@ -210,8 +206,6 @@ impl Parser {
                 value,
             }))
         } else {
-            // Expression statement
-            self.current -= 1; // Go back to identifier
             let expr = self.parse_expression()?;
             Ok(Some(Statement::Expression(expr)))
         }
@@ -220,7 +214,6 @@ impl Parser {
     fn parse_block(&mut self) -> CompilerResult<Vec<Statement>> {
         let mut statements = Vec::new();
         
-        // Expect indentation
         self.expect(TokenKind::Indent, "indent")?;
         
         while !self.check(TokenKind::Dedent) && !self.is_at_end() {
@@ -228,7 +221,6 @@ impl Parser {
                 statements.push(stmt);
             }
             
-            // Skip newlines between statements
             while self.match_token(TokenKind::Newline) {}
         }
         
@@ -357,7 +349,6 @@ impl Parser {
     }
     
     fn parse_type(&mut self) -> CompilerResult<Type> {
-        // Simplified type parsing for now
         if self.match_token(TokenKind::Identifier("number".to_string())) {
             Ok(Type::Number)
         } else if self.match_token(TokenKind::Identifier("string".to_string())) {
@@ -372,7 +363,6 @@ impl Parser {
         }
     }
     
-    // Helper methods for matching operators
     fn match_compound_assignment(&mut self) -> bool {
         matches!(
             self.peek().kind,
@@ -455,7 +445,6 @@ impl Parser {
         }
     }
     
-    // Token matching utilities
     fn match_token(&mut self, kind: TokenKind) -> bool {
         if self.check(kind) {
             self.advance();

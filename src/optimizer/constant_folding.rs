@@ -4,7 +4,6 @@ use crate::utils::position::Span;
 use super::Optimizer;
 
 pub struct ConstantFoldingOptimizer {
-    // Track constant values for expressions
     constant_values: std::collections::HashMap<String, Literal>,
 }
 
@@ -19,7 +18,6 @@ impl ConstantFoldingOptimizer {
         use Literal::*;
         
         match (op, left, right) {
-            // Arithmetic operations
             (BinaryOp::Add, Integer(a), Integer(b)) => Some(Integer(a + b)),
             (BinaryOp::Add, Integer(a), Float(b)) => Some.Float(*a as f64 + b),
             (BinaryOp::Add, Float(a), Integer(b)) => Some.Float(a + *b as f64),
@@ -72,18 +70,15 @@ impl ConstantFoldingOptimizer {
                 }
             },
             
-            // Bitwise operations on integers
             (BinaryOp::BitAnd, Integer(a), Integer(b)) => Some.Integer(a & b),
             (BinaryOp::BitOr, Integer(a), Integer(b)) => Some.Integer(a | b),
             (BinaryOp::BitXor, Integer(a), Integer(b)) => Some.Integer(a ^ b),
             (BinaryOp::ShiftLeft, Integer(a), Integer(b)) => Some.Integer(a << b),
             (BinaryOp::ShiftRight, Integer(a), Integer(b)) => Some.Integer(a >> b),
             
-            // Logical operations
             (BinaryOp::And, Boolean(a), Boolean(b)) => Some.Boolean(*a && *b),
             (BinaryOp::Or, Boolean(a), Boolean(b)) => Some.Boolean(*a || *b),
             
-            // Equality operations
             (BinaryOp::Equal, Integer(a), Integer(b)) => Some.Boolean(a == b),
             (BinaryOp::Equal, Float(a), Float(b)) => Some.Boolean(a == b),
             (BinaryOp::Equal, String(a), String(b)) => Some.Boolean(a == b),
@@ -98,7 +93,6 @@ impl ConstantFoldingOptimizer {
             (BinaryOp::NotEqual, Null, Null) => Some.Boolean(false),
             (BinaryOp::NotEqual, Undefined, Undefined) => Some.Boolean(false),
             
-            // Comparison operations
             (BinaryOp::Less, Integer(a), Integer(b)) => Some.Boolean(*a < *b),
             (BinaryOp::Less, Float(a), Float(b)) => Some.Boolean(*a < *b),
             (BinaryOp::Less, String(a), String(b)) => Some.Boolean(*a < *b),
@@ -115,7 +109,6 @@ impl ConstantFoldingOptimizer {
             (BinaryOp::GreaterEqual, Float(a), Float(b)) => Some.Boolean(*a >= *b),
             (BinaryOp::GreaterEqual, String(a), String(b)) => Some.Boolean(*a >= *b),
             
-            // Range operator
             (BinaryOp::Range, Integer(a), Integer(b)) => {
                 let start = *a;
                 let end = *b;
@@ -147,11 +140,9 @@ impl ConstantFoldingOptimizer {
     fn fold_constants_in_expression(&mut self, expr: &mut Expression) -> CompilerResult<()> {
         match expr {
             Expression::Binary { left, op, right } => {
-                // First fold constants in sub-expressions
                 self.fold_constants_in_expression(left)?;
                 self.fold_constants_in_expression(right)?;
                 
-                // Try to evaluate as constant
                 if let (Some(left_val), Some(right_val)) = 
                     (self.get_literal_value(left), self.get_literal_value(right)) {
                     
@@ -163,10 +154,8 @@ impl ConstantFoldingOptimizer {
             },
             
             Expression::Unary { op, expr } => {
-                // First fold constants in sub-expression
                 self.fold_constants_in_expression(expr)?;
                 
-                // Try to evaluate as constant
                 if let Some(val) = self.get_literal_value(expr) {
                     if let Some(result) = self.evaluate_unary_op(op, val) {
                         *expr = Expression::Literal(result);
@@ -176,7 +165,6 @@ impl ConstantFoldingOptimizer {
             },
             
             Expression::Call { function, arguments } => {
-                // Fold constants in function and arguments
                 self.fold_constants_in_expression(function)?;
                 for arg in arguments {
                     self.fold_constants_in_expression(arg)?;
@@ -190,14 +178,12 @@ impl ConstantFoldingOptimizer {
             
             Expression::Member { expr, member } => {
                 self.fold_constants_in_expression(expr)?;
-                // Members can't be folded, but we can optimize constant object access
             },
             
             Expression::Assignment { target, value, op } => {
                 self.fold_constants_in_expression(target)?;
                 self.fold_constants_in_expression(value)?;
                 
-                // For compound assignments, try to fold if both sides are constants
                 if let (Some(assignment_op), Some(target_val), Some(value_val)) = 
                     (op.as_ref(), self.get_literal_value(target), self.get_literal_value(value)) {
                     
@@ -208,7 +194,6 @@ impl ConstantFoldingOptimizer {
             },
             
             Expression::Lambda { parameters, return_type, body } => {
-                // Don't fold lambdas directly, but fold the body
                 self.fold_constants_in_statement(body)?;
             },
             
@@ -234,7 +219,6 @@ impl ConstantFoldingOptimizer {
             },
             
             Expression::Identifier(_) | Expression::Literal(_) => {
-                // Identifiers and literals don't need folding
             },
         }
         
@@ -317,23 +301,18 @@ impl ConstantFoldingOptimizer {
             },
             
             Statement::Function { name, parameters, return_type, body, async_flag } => {
-                // Don't fold function bodies during constant folding
-                // This would require more sophisticated analysis
             },
             
             Statement::Class { name, base, fields, methods } => {
-                // Don't fold class definitions during constant folding
             },
             
             Statement::Import { module, alias, items } => {
-                // Imports don't need constant folding
             },
         }
         
         Ok(())
     }
 
-    // Helper to extract literal value from expression
     fn get_literal_value(&self, expr: &Expression) -> Option<&Literal> {
         match expr {
             Expression::Literal(literal) => Some(literal),
@@ -341,7 +320,6 @@ impl ConstantFoldingOptimizer {
         }
     }
 
-    // Helper to check if expression is a constant
     fn is_constant_expression(&self, expr: &Expression) -> bool {
         matches!(expr, Expression::Literal(_))
     }

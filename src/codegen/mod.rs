@@ -16,7 +16,6 @@ pub trait CodeGenerator {
     fn generate_expression(&mut self, expr: &Expression) -> CompilerResult<()>;
 }
 
-/// Code generation pipeline that runs multiple generators in sequence
 pub struct CodeGenerationPipeline {
     generators: Vec<Box<dyn CodeGenerator>>,
 }
@@ -44,7 +43,6 @@ impl Default for CodeGenerationPipeline {
     fn default() -> Self {
         let mut pipeline = Self::new();
         
-        // Add code generators in order
         pipeline.add_generator(Box::new(IRGenerator::new()));
         pipeline.add_generator(Box::new(BytecodeGenerator::new()));
         pipeline.add_generator(Box::new(MachineCodeGenerator::new(TargetArchitecture::X86_64)));

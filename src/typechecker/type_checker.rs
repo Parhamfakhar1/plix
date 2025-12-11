@@ -47,20 +47,16 @@ impl TypeChecker {
     }
 
     pub fn check_program(&mut self, program: &Program) -> TypeCheckResult<()> {
-        // First pass: collect all top-level definitions
         for stmt in &program.statements {
             self.collect_top_level_definitions(stmt)?;
         }
 
-        // Second pass: analyze each statement with full type information
         for stmt in &program.statements {
             self.check_statement(stmt)?;
         }
 
-        // Check for unused definitions
         self.check_unused_definitions();
 
-        // Check for circular dependencies
         self.check_circular_dependencies();
 
         if !self.errors.is_empty() {
@@ -73,11 +69,9 @@ impl TypeChecker {
     pub fn collect_top_level_definitions(&mut self, stmt: &Statement) -> TypeCheckResult<()> {
         match stmt {
             Statement::Variable { mutable, name, type_annotation, value, .. } => {
-                // Define variable in scope
                 let type_ = if let Some(annotation) = type_annotation {
                     Type::from(annotation.clone())
                 } else {
-                    // Try to infer type from value
                     let value_type = self.infer_expression_type(value)?;
                     value_type
                 };
@@ -85,16 +79,13 @@ impl TypeChecker {
                 let current_scope = Rc::make_mut(&mut self.current_scope);
                 current_scope.define_variable(name.clone(), type_, *mutable, stmt.span())?;
 
-                // Record in use-def analysis
                 self.use_def_analysis.define_variable(name.clone(), stmt.span());
             },
 
             Statement::Constant { name, type_annotation, value, .. } => {
-                // Define constant in scope
                 let type_ = if let Some(annotation) = type_annotation {
                     Type::from(annotation.clone())
                 } else {
-                    // Try to infer type from value
                     let value_type = self.infer_expression_type(value)?;
                     value_type
                 };
@@ -102,12 +93,10 @@ impl TypeChecker {
                 let current_scope = Rc::make_mut(&mut self.current_scope);
                 current_scope.define_variable(name.clone(), type_, false, stmt.span())?;
 
-                // Record in use-def analysis
                 self.use_def_analysis.define_constant(name.clone(), stmt.span());
             },
 
             Statement::Function { name, parameters, return_type, body, .. } => {
-                // Define function in scope
                 let param_types: Vec<Type> = parameters
                     .iter()
                     .map(|p| {
@@ -140,12 +129,10 @@ impl TypeChecker {
                     stmt.span()
                 )?;
 
-                // Record in use-def analysis
                 self.use_def_analysis.define_function(name.clone(), stmt.span());
             },
 
             Statement::Class { name, base, fields, methods, .. } => {
-                // Define class as a type
                 let mut field_types = std::collections::HashMap::new();
                 
                 for field in fields {
@@ -159,28 +146,22 @@ impl TypeChecker {
                 let class_type = Type::Object(field_types);
                 self.type_env.define_type(name.clone(), class_type)?;
 
-                // Record in use-def analysis
                 self.use_def_analysis.define_variable(name.clone(), stmt.span());
 
-                // Handle base class dependency
                 if let Some(base_name) = base {
                     if let Some(base_def) = self.use_def_analysis.lookup_definition(base_name) {
-                        // Add dependency from derived class to base class
                         self.use_def_analysis.add_dependency(name, base_name);
                     }
                 }
 
-                // Define class methods
                 for method in methods {
                     if let Statement::Function { name: method_name, .. } = method {
-                        // Add dependency from class to method
                         self.use_def_analysis.add_dependency(name, method_name);
                     }
                 }
             },
 
             Statement::Import { .. } => {
-                // Imports are handled during use-def analysis
             },
 
             Statement::Block(statements) => {
@@ -195,7 +176,6 @@ impl TypeChecker {
             },
 
             _ => {
-                // Other statements don't define top-level symbols
             }
         }
 
@@ -205,18 +185,15 @@ impl TypeChecker {
     pub fn check_statement(&mut self, stmt: &Statement) -> TypeCheckResult<()> {
         match stmt {
             Statement::Variable { mutable, name, type_annotation, value, span } => {
-                // Get variable type (either from annotation or inference)
                 let expected_type = if let Some(annotation) = type_annotation {
                     Type::from(annotation.clone())
                 } else {
-                    // Infer type from value
                     let value_type = self.infer_expression_type(value)?;
                     let current_scope = Rc::make_mut(&mut self.current_scope);
                     current_scope.define_variable(name.clone(), value_type.clone(), *mutable, *span)?;
                     value_type
                 };
 
-                // Check value type matches expected type
                 let actual_type = self.infer_expression_type(value)?;
                 if !actual_type.is_compatible_with(&expected_type) {
                     self.errors.push(TypeCheckError::new(
@@ -226,25 +203,21 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Mark variable as used in use-def analysis
                 self.use_def_analysis.mark_usage(name, *span);
 
                 Ok(())
             },
 
             Statement::Constant { name, type_annotation, value, span } => {
-                // Get constant type (either from annotation or inference)
                 let expected_type = if let Some(annotation) = type_annotation {
                     Type::from(annotation.clone())
                 } else {
-                    // Infer type from value
                     let value_type = self.infer_expression_type(value)?;
                     let current_scope = Rc::make_mut(&mut self.current_scope);
                     current_scope.define_variable(name.clone(), value_type.clone(), false, *span)?;
                     value_type
                 };
 
-                // Check value type matches expected type
                 let actual_type = self.infer_expression_type(value)?;
                 if !actual_type.is_compatible_with(&expected_type) {
                     self.errors.push(TypeCheckError::new(
@@ -254,18 +227,15 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Mark constant as used in use-def analysis
                 self.use_def_analysis.mark_usage(name, *span);
 
                 Ok(())
             },
 
             Statement::Function { name, parameters, return_type, body, span, .. } => {
-                // Enter function scope
                 let function_scope = self.current_scope.enter_scope(ScopeKind::Function, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, function_scope);
 
-                // Define parameters
                 for param in parameters {
                     let param_type = param.type_annotation
                         .clone()
@@ -275,16 +245,13 @@ impl TypeChecker {
                     let current_scope = Rc::make_mut(&mut self.current_scope);
                     current_scope.define_variable(param.name.clone(), param_type.clone(), false, param.span.unwrap_or(*span))?;
 
-                    // Record parameter in use-def analysis
                     self.use_def_analysis.define_parameter(param.name.clone(), param.span.unwrap_or(*span));
                 }
 
-                // Check function body
                 for stmt in body {
                     self.check_statement(stmt)?;
                 }
 
-                // Verify return type
                 let actual_return_type = self.infer_statement_return_type(body)?;
                 let expected_return_type = return_type
                     .as_ref()
@@ -300,17 +267,14 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Restore previous scope
                 self.current_scope = previous_scope;
 
-                // Mark function as used in use-def analysis
                 self.use_def_analysis.mark_usage(name, *span);
 
                 Ok(())
             },
 
             Statement::If { condition, then_branch, elif_branches, else_branch, span } => {
-                // Check condition type
                 let cond_type = self.infer_expression_type(condition)?;
                 if !cond_type.is_boolean() && !cond_type.is_compatible_with(&Type::Any) {
                     self.errors.push(TypeCheckError::new(
@@ -320,7 +284,6 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Check then branch
                 let if_scope = self.current_scope.enter_scope(ScopeKind::If, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, if_scope);
 
@@ -330,9 +293,7 @@ impl TypeChecker {
 
                 self.current_scope = previous_scope;
 
-                // Check elif branches
                 for (elif_cond, elif_body) in elif_branches {
-                    // Check elif condition type
                     let elif_cond_type = self.infer_expression_type(elif_cond)?;
                     if !elif_cond_type.is_boolean() && !elif_cond_type.is_compatible_with(&Type::Any) {
                         self.errors.push(TypeCheckError::new(
@@ -342,7 +303,6 @@ impl TypeChecker {
                         return Err(self.errors.last().unwrap().clone());
                     }
 
-                    // Check elif body
                     let elif_scope = self.current_scope.enter_scope(ScopeKind::If, *span);
                     let elif_previous_scope = std::mem::replace(&mut self.current_scope, elif_scope);
 
@@ -353,7 +313,6 @@ impl TypeChecker {
                     self.current_scope = elif_previous_scope;
                 }
 
-                // Check else branch if exists
                 if let Some(else_body) = else_branch {
                     let else_scope = self.current_scope.enter_scope(ScopeKind::If, *span);
                     let else_previous_scope = std::mem::replace(&mut self.current_scope, else_scope);
@@ -369,7 +328,6 @@ impl TypeChecker {
             },
 
             Statement::While { condition, body, span } => {
-                // Check condition type
                 let cond_type = self.infer_expression_type(condition)?;
                 if !cond_type.is_boolean() && !cond_type.is_compatible_with(&Type::Any) {
                     self.errors.push(TypeCheckError::new(
@@ -379,7 +337,6 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Check loop body
                 let loop_scope = self.current_scope.enter_scope(ScopeKind::Loop, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, loop_scope);
 
@@ -393,7 +350,6 @@ impl TypeChecker {
             },
 
             Statement::For { variable, iterable, body, span } => {
-                // Check iterable type
                 let iterable_type = self.infer_expression_type(iterable)?;
                 if !iterable_type.is_compatible_with(&Type::Array(Box::new(Type::Any))) {
                     self.errors.push(TypeCheckError::new(
@@ -403,11 +359,9 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Define loop variable
                 let current_scope = Rc::make_mut(&mut self.current_scope);
                 current_scope.define_variable(variable.clone(), Type::Any, true, *span)?;
 
-                // Check loop body
                 let loop_scope = self.current_scope.enter_scope(ScopeKind::Loop, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, loop_scope);
 
@@ -417,22 +371,18 @@ impl TypeChecker {
 
                 self.current_scope = previous_scope;
 
-                // Mark loop variable as used
                 self.use_def_analysis.mark_usage(variable, *span);
 
                 Ok(())
             },
 
             Statement::Match { expr, arms, span } => {
-                // Check expression type
                 let expr_type = self.infer_expression_type(expr)?;
 
-                // Check each arm
                 let match_scope = self.current_scope.enter_scope(ScopeKind::Match, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, match_scope);
 
                 for arm in arms {
-                    // Check pattern type
                     let pattern_type = self.infer_expression_type(&arm.pattern)?;
                     if !pattern_type.is_compatible_with(&expr_type) {
                         self.errors.push(TypeCheckError::new(
@@ -443,7 +393,6 @@ impl TypeChecker {
                         return Err(self.errors.last().unwrap().clone());
                     }
 
-                    // Check guard if exists
                     if let Some(guard) = &arm.guard {
                         let guard_type = self.infer_expression_type(guard)?;
                         if !guard_type.is_boolean() {
@@ -455,7 +404,6 @@ impl TypeChecker {
                         }
                     }
 
-                    // Check arm body
                     self.check_expression(&arm.body)?;
                 }
 
@@ -489,7 +437,6 @@ impl TypeChecker {
             },
 
             Statement::Class { name, base, fields, methods, span } => {
-                // Define class type
                 let mut field_types = std::collections::HashMap::new();
                 
                 for field in fields {
@@ -503,11 +450,8 @@ impl TypeChecker {
                 let class_type = Type::Object(field_types);
                 self.type_env.define_type(name.clone(), class_type)?;
 
-                // Check base class if exists
                 if let Some(base_name) = base {
                     if let Some(base_type) = self.type_env.lookup_type(base_name) {
-                        // In a real implementation, we'd check inheritance compatibility
-                        // For now, just mark the dependency
                         self.use_def_analysis.add_dependency(name, base_name);
                     } else {
                         self.errors.push(TypeCheckError::new(
@@ -518,7 +462,6 @@ impl TypeChecker {
                     }
                 }
 
-                // Check methods
                 for method in methods {
                     self.check_statement(method)?;
                 }
@@ -527,12 +470,9 @@ impl TypeChecker {
             },
 
             Statement::Import { module, alias, items, span } => {
-                // In a real implementation, we'd resolve the import
-                // For now, just mark it as used in use-def analysis
                 let import_name = alias.as_ref().unwrap_or(module);
                 self.use_def_analysis.mark_usage(import_name, *span);
 
-                // Handle specific item imports
                 if let Some(items) = items {
                     for item in items {
                         let imported_name = item.name.clone();
@@ -553,7 +493,6 @@ impl TypeChecker {
     pub fn check_expression(&mut self, expr: &Expression) -> TypeCheckResult<()> {
         match expr {
             Expression::Identifier(name) => {
-                // Check if variable is defined
                 if self.current_scope.lookup_variable(name).is_none() {
                     self.errors.push(TypeCheckError::new(
                         format!("Undefined variable '{}'", name),
@@ -562,14 +501,12 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Mark as used in use-def analysis
                 self.use_def_analysis.mark_usage(name, expr.span());
 
                 Ok(())
             },
 
             Expression::Literal(_) => {
-                // Literals are always valid
                 Ok(())
             },
 
@@ -577,7 +514,6 @@ impl TypeChecker {
                 self.check_expression(left)?;
                 self.check_expression(right)?;
 
-                // Check operator compatibility
                 let left_type = self.infer_expression_type(left)?;
                 let right_type = self.infer_expression_type(right)?;
 
@@ -637,7 +573,6 @@ impl TypeChecker {
                     },
 
                     _ => {
-                        // Other operators are handled in type inference
                     }
                 }
 
@@ -671,7 +606,6 @@ impl TypeChecker {
                     },
 
                     _ => {
-                        // Other operators are handled in type inference
                     }
                 }
 
@@ -681,10 +615,8 @@ impl TypeChecker {
             Expression::Call { function, arguments } => {
                 self.check_expression(function)?;
 
-                // Check function type
                 let func_type = self.infer_expression_type(function)?;
                 if let Type::Function(params, return_type) = func_type {
-                    // Check argument count
                     if params.len() != arguments.len() {
                         self.errors.push(TypeCheckError::new(
                             format!("Expected {} arguments, got {}", params.len(), arguments.len()),
@@ -693,7 +625,6 @@ impl TypeChecker {
                         return Err(self.errors.last().unwrap().clone());
                     }
 
-                    // Check argument types
                     for (param_type, arg) in params.iter().zip(arguments.iter()) {
                         self.check_expression(arg)?;
                         let arg_type = self.infer_expression_type(arg)?;
@@ -721,10 +652,8 @@ impl TypeChecker {
                 self.check_expression(expr)?;
                 self.check_expression(index)?;
 
-                // Check array type
                 let array_type = self.infer_expression_type(expr)?;
                 if let Type::Array(_) = array_type {
-                    // Check index type
                     let index_type = self.infer_expression_type(index)?;
                     if !index_type.is_numeric() {
                         self.errors.push(TypeCheckError::new(
@@ -747,7 +676,6 @@ impl TypeChecker {
             Expression::Member { expr, member } => {
                 self.check_expression(expr)?;
 
-                // Check object type
                 let obj_type = self.infer_expression_type(expr)?;
                 if let Type::Object(fields) = obj_type {
                     if !fields.contains_key(member) {
@@ -772,7 +700,6 @@ impl TypeChecker {
                 self.check_expression(target)?;
                 self.check_expression(value)?;
 
-                // Check target type
                 let target_type = self.infer_expression_type(target)?;
                 let value_type = self.infer_expression_type(value)?;
 
@@ -785,9 +712,7 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Check if assignment operator is valid
                 if let Some(_) = op {
-                    // Compound assignment - check if operation is valid
                     match op.as_ref().unwrap() {
                         crate::parser::ast::BinaryOp::Add |
                         crate::parser::ast::BinaryOp::Subtract |
@@ -803,7 +728,6 @@ impl TypeChecker {
                             }
                         },
                         _ => {
-                            // Other operators may be valid for other types
                         }
                     }
                 }
@@ -812,11 +736,9 @@ impl TypeChecker {
             },
 
             Expression::Lambda { parameters, return_type, body } => {
-                // Enter lambda scope
                 let lambda_scope = self.current_scope.enter_scope(ScopeKind::Function, expr.span());
                 let previous_scope = std::mem::replace(&mut self.current_scope, lambda_scope);
 
-                // Define parameters
                 for param in parameters {
                     let param_type = param.type_annotation
                         .clone()
@@ -827,10 +749,8 @@ impl TypeChecker {
                     current_scope.define_variable(param.name.clone(), param_type, false, param.span.unwrap_or_else(|| expr.span()))?;
                 }
 
-                // Check lambda body
                 self.check_statement(body)?;
 
-                // Restore previous scope
                 self.current_scope = previous_scope;
 
                 Ok(())
@@ -839,7 +759,6 @@ impl TypeChecker {
             Expression::If { condition, then_branch, else_branch } => {
                 self.check_expression(condition)?;
 
-                // Check condition type
                 let cond_type = self.infer_expression_type(condition)?;
                 if !cond_type.is_boolean() {
                     self.errors.push(TypeCheckError::new(
@@ -849,10 +768,8 @@ impl TypeChecker {
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                // Check then branch
                 self.check_expression(then_branch)?;
 
-                // Check else branch if exists
                 if let Some(else_branch) = else_branch {
                     self.check_expression(else_branch)?;
                 }
@@ -863,7 +780,6 @@ impl TypeChecker {
             Expression::Match { expr, arms } => {
                 self.check_expression(expr)?;
 
-                // Check each arm
                 for arm in arms {
                     self.check_expression(&arm.pattern)?;
                     
@@ -931,7 +847,6 @@ impl TypeChecker {
             if !cycle.is_empty() {
                 self.errors.push(TypeCheckError::new(
                     format!("Circular dependency detected: {}", cycle.join(" -> ")),
-                    Span::default() // In a real implementation, would track actual spans
                 ));
             }
         }

@@ -14,7 +14,6 @@ impl TypeEnvironment {
     pub fn new() -> Self {
         let mut builtin_types = HashMap::new();
         
-        // Add primitive types
         builtin_types.insert("number".to_string(), Type::Number);
         builtin_types.insert("string".to_string(), Type::String);
         builtin_types.insert("boolean".to_string(), Type::Boolean);
@@ -23,11 +22,9 @@ impl TypeEnvironment {
         builtin_types.insert("undefined".to_string(), Type::Undefined);
         builtin_types.insert("any".to_string(), Type::Any);
         
-        // Add array type constructor
         builtin_types.insert("Array".to_string(), 
             Type::Function(vec![Type::Any], Box::new(Type::Any)));
         
-        // Add object type constructor
         builtin_types.insert("Object".to_string(), 
             Type::Function(vec![], Box::new(Type::Any)));
         
@@ -39,17 +36,14 @@ impl TypeEnvironment {
     }
 
     pub fn lookup_type(&self, name: &str) -> Option<Type> {
-        // First check type aliases
         if let Some(alias) = self.type_aliases.get(name) {
             return Some(alias.clone());
         }
         
-        // Then check builtin types
         if let Some(builtin) = self.builtin_types.get(name) {
             return Some(builtin.clone());
         }
         
-        // Finally check user-defined types
         self.types.get(name).cloned()
     }
 
@@ -96,7 +90,6 @@ impl TypeEnvironment {
                 let func_type = self.infer_expression_type(function)?;
                 
                 if let Type::Function(params, return_type) = func_type {
-                    // Check argument count
                     if params.len() != arguments.len() {
                         return Err(TypeEnvironmentError::ArgumentCountMismatch {
                             expected: params.len(),
@@ -104,7 +97,6 @@ impl TypeEnvironment {
                         });
                     }
                     
-                    // Check argument types
                     for (param_type, arg) in params.iter().zip(arguments.iter()) {
                         let arg_type = self.infer_expression_type(arg)?;
                         if !arg_type.is_compatible_with(param_type) {
@@ -184,7 +176,6 @@ impl TypeEnvironment {
             },
             
             Expression::If { condition, then_branch, else_branch } => {
-                // Check condition type
                 let cond_type = self.infer_expression_type(condition)?;
                 if !cond_type.is_boolean() && !cond_type.is_compatible_with(&Type::Any) {
                     return Err(TypeEnvironmentError::InvalidConditionType {
@@ -192,17 +183,14 @@ impl TypeEnvironment {
                     });
                 }
                 
-                // Check then branch type
                 let then_type = self.infer_expression_type(then_branch)?;
                 
-                // Check else branch type if exists
                 let else_type = if let Some(else_branch) = else_branch {
                     self.infer_expression_type(else_branch)?
                 } else {
                     Type::Void
                 };
                 
-                // Return union of then and else types
                 Ok(Type::Union(vec![then_type, else_type]))
             },
             
@@ -215,7 +203,6 @@ impl TypeEnvironment {
                     arm_types.push(arm_type);
                 }
                 
-                // Return union of all arm types
                 Ok(Type::Union(arm_types))
             },
         }
@@ -231,17 +218,13 @@ impl TypeEnvironment {
             Literal::Undefined => Ok(Type::Undefined),
             Literal::Array(elements) => {
                 if elements.is_empty() {
-                    // Empty array - can't determine element type
                     Ok(Type::Array(Box::new(Type::Any)))
                 } else {
-                    // Try to infer element type from first element
                     let first_type = self.infer_expression_type(&elements[0])?;
                     
-                    // Check all elements have compatible types
                     for element in elements.iter().skip(1) {
                         let element_type = self.infer_expression_type(element)?;
                         if !element_type.is_compatible_with(&first_type) {
-                            // Return array of any if types are incompatible
                             return Ok(Type::Array(Box::new(Type::Any)));
                         }
                     }
@@ -270,11 +253,9 @@ impl TypeEnvironment {
     ) -> Result<Type, TypeEnvironmentError> {
         match op {
             BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide | BinaryOp::Modulo => {
-                // Arithmetic operations
                 if left_type.is_numeric() && right_type.is_numeric() {
                     Ok(Type::Number)
                 } else if left_type.is_string() && right_type.is_string() {
-                    // String concatenation
                     Ok(Type::String)
                 } else {
                     Err(TypeEnvironmentError::InvalidBinaryOperands {
@@ -286,7 +267,6 @@ impl TypeEnvironment {
             },
             
             BinaryOp::Equal | BinaryOp::NotEqual => {
-                // Equality operations
                 if left_type.is_compatible_with(right_type) {
                     Ok(Type::Boolean)
                 } else {
@@ -298,7 +278,6 @@ impl TypeEnvironment {
             },
             
             BinaryOp::Less | BinaryOp::LessEqual | BinaryOp::Greater | BinaryOp::GreaterEqual => {
-                // Comparison operations
                 if left_type.is_numeric() && right_type.is_numeric() {
                     Ok(Type::Boolean)
                 } else if left_type.is_string() && right_type.is_string() {
@@ -312,7 +291,6 @@ impl TypeEnvironment {
             },
             
             BinaryOp::And | BinaryOp::Or => {
-                // Logical operations
                 if left_type.is_boolean() && right_type.is_boolean() {
                     Ok(Type::Boolean)
                 } else {
@@ -325,7 +303,6 @@ impl TypeEnvironment {
             },
             
             BinaryOp::BitAnd | BinaryOp::BitOr | BinaryOp::BitXor | BinaryOp::ShiftLeft | BinaryOp::ShiftRight => {
-                // Bitwise operations
                 if left_type.is_numeric() && right_type.is_numeric() {
                     Ok(Type::Number)
                 } else {
@@ -338,7 +315,6 @@ impl TypeEnvironment {
             },
             
             BinaryOp::Range => {
-                // Range operator
                 if left_type.is_numeric() && right_type.is_numeric() {
                     Ok(Type::Array(Box::new(Type::Number)))
                 } else {
@@ -358,7 +334,6 @@ impl TypeEnvironment {
     ) -> Result<Type, TypeEnvironmentError> {
         match op {
             UnaryOp::Plus | UnaryOp::Minus => {
-                // Unary plus/minus
                 if expr_type.is_numeric() {
                     Ok(Type::Number)
                 } else {
@@ -370,7 +345,6 @@ impl TypeEnvironment {
             },
             
             UnaryOp::Not => {
-                // Logical not
                 if expr_type.is_boolean() {
                     Ok(Type::Boolean)
                 } else {
@@ -382,7 +356,6 @@ impl TypeEnvironment {
             },
             
             UnaryOp::BitNot => {
-                // Bitwise not
                 if expr_type.is_numeric() {
                     Ok(Type::Number)
                 } else {
@@ -450,5 +423,4 @@ pub enum TypeEnvironmentError {
     InvalidUnaryOperand { op: String, type_: String },
 }
 
-// Import AST types
 use crate::parser::ast::{Expression, Literal, BinaryOp, UnaryOp};

@@ -30,7 +30,6 @@ impl<'a> Lexer<'a> {
             tokens.push(token);
         }
         
-        // Handle final dedents
         while self.indent_stack.len() > 1 {
             tokens.push(self.create_token(TokenKind::Dedent, "".to_string()));
             self.indent_stack.pop();
@@ -41,12 +40,10 @@ impl<'a> Lexer<'a> {
     }
     
     fn next_token(&mut self) -> CompilerResult<Option<Token>> {
-        // First return any pending tokens (indent/dedent)
         if let Some(token) = self.pending_tokens.pop() {
             return Ok(Some(token));
         }
         
-        // Skip whitespace (but not newlines)
         self.skip_whitespace_except_newline();
         
         let start_pos = self.current_pos;
@@ -56,7 +53,6 @@ impl<'a> Lexer<'a> {
             None => return Ok(None),
         };
         
-        // Handle indentation at start of line (after skipping whitespace)
         if self.is_start_of_line && next_char != '\n' && next_char != '\r' {
             self.handle_indentation()?;
             if let Some(token) = self.pending_tokens.pop() {
@@ -65,18 +61,14 @@ impl<'a> Lexer<'a> {
         }
         
         let token = match next_char {
-            // Comments
             '#' => self.scan_comment(),
             '"' => self.scan_string(),
             '\'' => self.scan_char(),
             
-            // Numbers
             '0'..='9' => self.scan_number(),
             
-            // Identifiers and keywords
             'a'..='z' | 'A'..='Z' | '_' => self.scan_identifier(),
             
-            // Operators and punctuation
             '+' => self.scan_plus(),
             '-' => self.scan_minus(),
             '*' => self.scan_star(),
@@ -102,14 +94,12 @@ impl<'a> Lexer<'a> {
             '{' => self.consume_char(TokenKind::LBrace),
             '}' => self.consume_char(TokenKind::RBrace),
             
-            // Newlines - reset start of line flag
             '\n' => {
                 let token = self.consume_char(TokenKind::Newline);
                 self.is_start_of_line = true;
                 token
             }
             '\r' => {
-                self.next_char(); // skip \r
                 if self.input.peek() == Some(&'\n') {
                     let token = self.consume_char(TokenKind::Newline);
                     self.is_start_of_line = true;
@@ -122,7 +112,6 @@ impl<'a> Lexer<'a> {
                 }
             }
             
-            // Unexpected character
             ch => {
                 self.next_char();
                 return Err(LexerError::UnexpectedCharacter {
@@ -140,7 +129,6 @@ impl<'a> Lexer<'a> {
         let start_pos = self.current_pos;
         let mut indent_level = 0;
         
-        // Count spaces for indentation
         while let Some(&ch) = self.input.peek() {
             match ch {
                 ' ' => {
@@ -148,7 +136,6 @@ impl<'a> Lexer<'a> {
                     self.next_char();
                 }
                 '\t' => {
-                    // Tabs are 4 spaces
                     indent_level += 4;
                     self.next_char();
                 }
@@ -156,17 +143,14 @@ impl<'a> Lexer<'a> {
             }
         }
         
-        // Skip empty lines and comments
         if let Some(&ch) = self.input.peek() {
             if ch == '#' {
-                // Skip the entire comment line
                 self.scan_comment()?;
                 self.is_start_of_line = true;
                 return Ok(());
             }
             
             if ch == '\n' || ch == '\r' {
-                // Empty line, don't change indentation
                 self.is_start_of_line = true;
                 return Ok(());
             }
@@ -175,7 +159,6 @@ impl<'a> Lexer<'a> {
         let current_indent = *self.indent_stack.last().unwrap();
         
         if indent_level > current_indent {
-            // Indent
             self.indent_stack.push(indent_level);
             self.pending_tokens.push(self.create_token_with_pos(
                 TokenKind::Indent,
@@ -184,7 +167,6 @@ impl<'a> Lexer<'a> {
                 self.current_pos,
             ));
         } else if indent_level < current_indent {
-            // Dedent
             while let Some(&stack_indent) = self.indent_stack.last() {
                 if stack_indent > indent_level {
                     self.indent_stack.pop();
@@ -213,15 +195,11 @@ impl<'a> Lexer<'a> {
     fn scan_comment(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
         
-        self.next_char(); // Skip '#'
         
-        // Check for block comment
         if self.input.peek() == Some(&'*') {
-            self.next_char(); // Skip '*'
             return self.scan_block_comment(start_pos);
         }
         
-        // Line comment - skip until newline
         while let Some(&ch) = self.input.peek() {
             if ch == '\n' || ch == '\r' {
                 break;
@@ -229,7 +207,6 @@ impl<'a> Lexer<'a> {
             self.next_char();
         }
         
-        // Comments don't produce tokens, get next token instead
         self.next_token()
             .transpose()
             .unwrap_or(Ok(Token::eof(self.current_pos)))
@@ -242,18 +219,15 @@ impl<'a> Lexer<'a> {
             match self.input.next() {
                 Some('*') => {
                     if self.input.peek() == Some(&'#') {
-                        self.next_char(); // Skip '#'
                         depth -= 1;
                     }
                 }
                 Some('#') => {
                     if self.input.peek() == Some(&'*') {
-                        self.next_char(); // Skip '*'
                         depth += 1;
                     }
                 }
                 Some(_) => {
-                    // Continue scanning
                 }
                 None => {
                     return Err(LexerError::UnterminatedComment {
@@ -263,7 +237,6 @@ impl<'a> Lexer<'a> {
             }
         }
         
-        // Block comments don't produce tokens, get next token instead
         self.next_token()
             .transpose()
             .unwrap_or(Ok(Token::eof(self.current_pos)))
@@ -274,7 +247,6 @@ impl<'a> Lexer<'a> {
         let mut value = String::new();
         let mut lexeme = String::new();
         
-        self.next_char(); // Skip opening quote
         lexeme.push('"');
         
         let mut terminated = false;
@@ -282,25 +254,20 @@ impl<'a> Lexer<'a> {
         while let Some(&ch) = self.input.peek() {
             match ch {
                 '"' => {
-                    self.next_char(); // Skip closing quote
                     lexeme.push('"');
                     terminated = true;
                     break;
                 }
                 '\\' => {
                     lexeme.push('\\');
-                    self.next_char(); // Skip backslash
                     if let Some(escaped_ch) = self.input.next() {
                         lexeme.push(escaped_ch);
                         value.push(self.escape_char(escaped_ch, self.current_pos)?);
                     }
                 }
                 '$' => {
-                    // String interpolation
                     if self.input.peek().is_some_and(|&c| c == '{') {
-                        // TODO: Handle string interpolation in later phase
                         lexeme.push('$');
-                        self.next_char(); // Skip '$'
                         if let Some('{') = self.input.next() {
                             lexeme.push('{');
                         }
@@ -312,7 +279,6 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 '\n' | '\r' => {
-                    // Newline in string - this is an error unless it's a multi-line string
                     break;
                 }
                 _ => {
@@ -342,13 +308,11 @@ impl<'a> Lexer<'a> {
         let mut value = String::new();
         let mut lexeme = String::new();
         
-        self.next_char(); // Skip opening quote
         lexeme.push('\'');
         
         if let Some(&ch) = self.input.peek() {
             if ch == '\\' {
                 lexeme.push('\\');
-                self.next_char(); // Skip backslash
                 if let Some(escaped_ch) = self.input.next() {
                     lexeme.push(escaped_ch);
                     value.push(self.escape_char(escaped_ch, self.current_pos)?);
@@ -371,7 +335,6 @@ impl<'a> Lexer<'a> {
         }
         lexeme.push('\'');
         
-        // For now, treat char as single-character string
         Ok(self.create_token_with_pos(
             TokenKind::StringLiteral(value),
             lexeme,
@@ -401,7 +364,6 @@ impl<'a> Lexer<'a> {
         let mut lexeme = String::new();
         let mut is_float = false;
         
-        // Integer part
         while let Some(&ch) = self.input.peek() {
             match ch {
                 '0'..='9' => {
@@ -421,7 +383,6 @@ impl<'a> Lexer<'a> {
                     lexeme.push(ch);
                     self.next_char();
                     
-                    // Optional exponent sign
                     if let Some(&sign) = self.input.peek() {
                         if sign == '+' || sign == '-' {
                             lexeme.push(sign);
@@ -430,7 +391,6 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 '_' => {
-                    // Skip underscores in numbers (for readability)
                     self.next_char();
                 }
                 _ => break,
@@ -470,7 +430,6 @@ impl<'a> Lexer<'a> {
         let start_pos = self.current_pos;
         let mut lexeme = String::new();
         
-        // First character
         if let Some(&ch) = self.input.peek() {
             if ch.is_alphabetic() || ch == '_' {
                 lexeme.push(ch);
@@ -478,7 +437,6 @@ impl<'a> Lexer<'a> {
             }
         }
         
-        // Subsequent characters
         while let Some(&ch) = self.input.peek() {
             if ch.is_alphanumeric() || ch == '_' {
                 lexeme.push(ch);
@@ -521,10 +479,8 @@ impl<'a> Lexer<'a> {
         ))
     }
     
-    // Operator scanning methods
     fn scan_plus(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '+'
         
         if self.input.peek() == Some(&'=') {
             self.next_char();
@@ -546,7 +502,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_minus(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '-'
         
         match self.input.peek() {
             Some(&'=') => {
@@ -578,7 +533,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_star(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '*'
         
         if self.input.peek() == Some(&'=') {
             self.next_char();
@@ -600,7 +554,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_slash(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '/'
         
         if self.input.peek() == Some(&'=') {
             self.next_char();
@@ -622,7 +575,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_percent(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '%'
         
         if self.input.peek() == Some(&'=') {
             self.next_char();
@@ -648,7 +600,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_bang(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '!'
         
         if self.input.peek() == Some(&'=') {
             self.next_char();
@@ -670,7 +621,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_equal(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '='
         
         match self.input.peek() {
             Some(&'=') => {
@@ -702,7 +652,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_less(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '<'
         
         match self.input.peek() {
             Some(&'=') => {
@@ -734,7 +683,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_greater(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '>'
         
         match self.input.peek() {
             Some(&'=') => {
@@ -766,7 +714,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_amp(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '&'
         
         if self.input.peek() == Some(&'&') {
             self.next_char();
@@ -788,7 +735,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_pipe(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '|'
         
         if self.input.peek() == Some(&'|') {
             self.next_char();
@@ -814,13 +760,10 @@ impl<'a> Lexer<'a> {
     
     fn scan_dot(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip '.'
         
         match self.input.peek() {
             Some(&'.') => {
-                self.next_char(); // Skip second '.'
                 if self.input.peek() == Some(&'.') {
-                    self.next_char(); // Skip third '.'
                     Ok(self.create_token_with_pos(
                         TokenKind::Ellipsis,
                         "...".to_string(),
@@ -847,7 +790,6 @@ impl<'a> Lexer<'a> {
     
     fn scan_colon(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
-        self.next_char(); // Skip ':'
         
         if self.input.peek() == Some(&':') {
             self.next_char();
@@ -867,7 +809,6 @@ impl<'a> Lexer<'a> {
         }
     }
     
-    // Utility methods
     fn consume_char(&mut self, kind: TokenKind) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
         let ch = self.input.next().unwrap();

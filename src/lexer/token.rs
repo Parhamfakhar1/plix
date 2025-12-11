@@ -3,7 +3,6 @@ use crate::utils::position::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
-    // Identifiers and literals
     Identifier(String),
     StringLiteral(String),
     NumberLiteral(f64),
@@ -12,7 +11,6 @@ pub enum TokenKind {
     Null,
     Undefined,
     
-    // Keywords
     Def,
     Const,
     Mut,
@@ -33,60 +31,12 @@ pub enum TokenKind {
     True,
     False,
     
-    // Operators
-    Plus,           // +
-    Minus,          // -
-    Star,           // *
-    Slash,          // /
-    Percent,        // %
-    Caret,          // ^
-    Bang,           // !
-    Assign,         // =
-    PlusAssign,     // +=
-    MinusAssign,    // -=
-    StarAssign,     // *=
-    SlashAssign,    // /=
-    PercentAssign,  // %=
     
-    // Comparison operators
-    Equal,          // ==
-    NotEqual,       // !=
-    Less,           // <
-    Greater,        // >
-    LessEqual,      // <=
-    GreaterEqual,   // >=
     
-    // Logical operators
-    And,            // &&
-    Or,             // ||
     
-    // Bitwise operators
-    Amp,            // &
-    Pipe,           // |
-    Tilde,          // ~
-    Shl,            // <<
-    Shr,            // >>
     
-    // Punctuation
-    Dot,            // .
-    Comma,          // ,
-    Colon,          // :
-    Semicolon,      // ;
-    Question,       // ?
-    DoubleColon,    // ::
-    Arrow,          // =>
-    Range,          // ..
-    Ellipsis,       // ...
     
-    // Brackets
-    LParen,         // (
-    RParen,         // )
-    LBracket,       // [
-    RBracket,       // ]
-    LBrace,         // {
-    RBrace,         // }
     
-    // Special
     Newline,
     Indent,
     Dedent,

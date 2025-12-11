@@ -133,7 +133,6 @@ impl Scope {
             var_info.used = true;
             Ok(())
         } else if let Some(parent) = &self.parent {
-            // Try to find in parent scope
             Rc::make_mut(parent).mark_variable_used(name)
         } else {
             Err(ScopeError::VariableNotFound { name: name.to_string() })

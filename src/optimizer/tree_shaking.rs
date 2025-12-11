@@ -193,30 +193,24 @@ impl TreeShakingOptimizer {
         statements.retain_mut(|stmt| {
             match stmt {
                 Statement::Expression(expr) => {
-                    // Keep expression statements that contain used symbols
                     self.collect_used_symbols(expr);
                     true
                 },
                 Statement::Variable { mutable, name, type_annotation, value } => {
-                    // Keep variable definitions if the variable is used
                     if self.is_symbol_used(name) {
                         self.collect_used_symbols(value);
                         true
                     } else {
-                        false // Remove unused variable
                     }
                 },
                 Statement::Constant { name, type_annotation, value } => {
-                    // Keep constant definitions if the constant is used
                     if self.is_symbol_used(name) {
                         self.collect_used_symbols(value);
                         true
                     } else {
-                        false // Remove unused constant
                     }
                 },
                 Statement::Function { name, parameters, return_type, body, async_flag } => {
-                    // Keep function definitions if the function is used
                     if self.is_symbol_used(name) {
                         for param in parameters {
                             self.symbol_stack.push(param.name.clone());
@@ -229,16 +223,12 @@ impl TreeShakingOptimizer {
                         }
                         true
                     } else {
-                        false // Remove unused function
                     }
                 },
                 Statement::Class { name, base, fields, methods } => {
-                    // Keep class definitions if the class is used
                     if self.is_symbol_used(name) {
                         for field in fields {
                             if !self.is_symbol_used(&field.name) {
-                                // Remove unused fields
-                                *field = field.clone(); // Placeholder - would actually remove the field
                             }
                         }
                         for method in methods {
@@ -246,15 +236,12 @@ impl TreeShakingOptimizer {
                         }
                         true
                     } else {
-                        false // Remove unused class
                     }
                 },
                 Statement::If { condition, then_branch, elif_branches, else_branch } => {
-                    // Remove empty branches
                     then_branch.retain(|stmt| {
                         match stmt {
                             Statement::Expression(_) => true,
-                            _ => false // Remove other statements in this simplified version
                         }
                     });
 
@@ -281,7 +268,6 @@ impl TreeShakingOptimizer {
                     else_branch.as_ref().map_or(false, |body| !body.is_empty())
                 },
                 Statement::While { condition, body } => {
-                    // Remove empty loops
                     body.retain(|stmt| {
                         match stmt {
                             Statement::Expression(_) => true,
@@ -291,7 +277,6 @@ impl TreeShakingOptimizer {
                     !body.is_empty()
                 },
                 Statement::For { variable, iterable, body } => {
-                    // Remove empty loops
                     body.retain(|stmt| {
                         match stmt {
                             Statement::Expression(_) => true,
@@ -304,7 +289,6 @@ impl TreeShakingOptimizer {
                     self.remove_unused_statements(statements);
                     !statements.is_empty()
                 },
-                _ => true, // Keep other statements for now
             }
         });
     }
@@ -312,10 +296,8 @@ impl TreeShakingOptimizer {
 
 impl Optimizer for TreeShakingOptimizer {
     fn optimize_program(&mut self, program: &mut Program) -> CompilerResult<()> {
-        // First pass: collect all used symbols
         self.collect_used_symbols_from_statement(&Statement::Block(program.statements.clone()));
         
-        // Second pass: remove unused code
         self.remove_unused_statements(&mut program.statements);
         
         Ok(())
@@ -350,8 +332,6 @@ impl Optimizer for TreeShakingOptimizer {
     }
 
     fn optimize_expression(&mut self, expr: &mut Expression) -> CompilerResult<()> {
-        // Tree shaking doesn't typically optimize expressions directly
-        // This is handled at the statement level
         Ok(())
     }
 }

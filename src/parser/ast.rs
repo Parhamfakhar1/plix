@@ -1,6 +1,5 @@
 use std::fmt;
 use crate::utils::position::Span;
-// use crate::lexer::token::Token;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -65,34 +64,10 @@ pub enum Literal {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOp {
-    Add,        // +
-    Subtract,   // -
-    Multiply,   // *
-    Divide,     // /
-    Modulo,     // %
-    Power,      // ^
-    Equal,      // ==
-    NotEqual,   // !=
-    Less,       // <
-    LessEqual,  // <=
-    Greater,    // >
-    GreaterEqual, // >=
-    And,        // &&
-    Or,         // ||
-    BitAnd,     // &
-    BitOr,      // |
-    BitXor,     // ^
-    ShiftLeft,  // <<
-    ShiftRight, // >>
-    Range,      // ..
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOp {
-    Plus,      // +
-    Minus,     // -
-    Not,       // !
-    BitNot,    // ~
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -252,7 +227,6 @@ pub struct Program {
     pub span: Span,
 }
 
-// Utility functions for creating AST nodes
 impl Expression {
     pub fn identifier(name: String) -> Self {
         Expression::Identifier(name)

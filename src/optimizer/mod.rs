@@ -43,7 +43,6 @@ impl Default for OptimizationPipeline {
     fn default() -> Self {
         let mut pipeline = Self::new();
         
-        // Add optimizers in order
         pipeline.add_optimizer(Box::new(ConstantFoldingOptimizer::new()));
         pipeline.add_optimizer(Box::new(LoopOptimizer::new()));
         pipeline.add_optimizer(Box::new(TreeShakingOptimizer::new()));
