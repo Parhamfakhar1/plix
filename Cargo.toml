@@ -1,7 +1,8 @@
 [package]
 name = "plix-compiler"
 version = "0.1.0"
-edition = "2025"
+edition = "2024"
+
 description = "A modern programming language compiler combining Python simplicity with Rust performance"
 authors = ["Plix Team"]
 license = "MIT"

@@ -31,17 +31,53 @@ pub enum TokenKind {
     True,
     False,
     
-    
-    
-    
-    
-    
-    
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Caret,
+    Bang,
+    Assign,
+    PlusAssign,
+    MinusAssign,
+    StarAssign,
+    SlashAssign,
+    PercentAssign,
+    Equal,
+    NotEqual,
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
+    And,
+    Or,
+    Amp,
+    Pipe,
+    Tilde,
+    Shl,
+    Shr,
+    Dot,
+    Comma,
+    Colon,
+    Semicolon,
+    Question,
+    DoubleColon,
+    Arrow,
+    Range,
+    Ellipsis,
+    LParen,
+    RParen,
+    LBracket,
+    RBracket,
+    LBrace,
+    RBrace,
     Newline,
     Indent,
     Dedent,
     EOF,
 }
+
 
 impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
