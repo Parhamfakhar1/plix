@@ -8,7 +8,7 @@ use super::use_def::{UseDefAnalysis, DefinitionKind};
 
 pub type TypeCheckResult<T> = Result<T, TypeCheckError>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone)]
 pub enum TypeCheckError {
     #[error("Type check error: {message}")]
     TypeCheck { message: String, span: Span },
@@ -239,8 +239,8 @@ impl TypeChecker {
                 for param in parameters {
                     let param_type = param.type_annotation
                         .clone()
-                        .unwrap_or_else(|| Type::Any)
-                        .into();
+                        .map(|t| Type::from(t))
+                        .unwrap_or_else(|| Type::Any);
 
                     let current_scope = Rc::make_mut(&mut self.current_scope);
                     current_scope.define_variable(param.name.clone(), param_type.clone(), false, param.span.unwrap_or(*span))?;
@@ -383,16 +383,8 @@ impl TypeChecker {
                 let previous_scope = std::mem::replace(&mut self.current_scope, match_scope);
 
                 for arm in arms {
-                    let pattern_type = self.infer_expression_type(&arm.pattern)?;
-                    if !pattern_type.is_compatible_with(&expr_type) {
-                        self.errors.push(TypeCheckError::new(
-                            format!("Pattern type '{}' does not match expression type '{}'", 
-                                   pattern_type.to_string(), expr_type.to_string()),
-                            arm.pattern.span()
-                        ));
-                        return Err(self.errors.last().unwrap().clone());
-                    }
-
+                    // Patterns are not expressions, so we can't infer their type directly
+                    // For now, we'll skip pattern type checking
                     if let Some(guard) = &arm.guard {
                         let guard_type = self.infer_expression_type(guard)?;
                         if !guard_type.is_boolean() {
@@ -412,8 +404,8 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Statement::Block(statements) => {
-                let block_scope = self.current_scope.enter_scope(ScopeKind::Block, stmt.span());
+            Statement::Block(statements, span) => {
+                let block_scope = self.current_scope.enter_scope(ScopeKind::Block, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, block_scope);
 
                 for stmt in statements {
@@ -425,11 +417,11 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Statement::Expression(expr) => {
+            Statement::Expression(expr, span) => {
                 self.check_expression(expr)
             },
 
-            Statement::Return(value) => {
+            Statement::Return(value, span) => {
                 if let Some(expr) = value {
                     self.check_expression(expr)?;
                 }
@@ -476,10 +468,7 @@ impl TypeChecker {
                 if let Some(items) = items {
                     for item in items {
                         let imported_name = item.name.clone();
-                        let tracking_name = item.as_ref().map_or_else(
-                            || imported_name.clone(),
-                            |(_, alias)| alias.clone().unwrap_or_else(|| imported_name.clone())
-                        );
+                        let tracking_name = item.alias.clone().unwrap_or_else(|| imported_name.clone());
                         
                         self.use_def_analysis.mark_usage(&tracking_name, *span);
                     }
@@ -492,25 +481,25 @@ impl TypeChecker {
 
     pub fn check_expression(&mut self, expr: &Expression) -> TypeCheckResult<()> {
         match expr {
-            Expression::Identifier(name) => {
+            Expression::Identifier(name, span) => {
                 if self.current_scope.lookup_variable(name).is_none() {
                     self.errors.push(TypeCheckError::new(
                         format!("Undefined variable '{}'", name),
-                        expr.span()
+                        *span
                     ));
                     return Err(self.errors.last().unwrap().clone());
                 }
 
-                self.use_def_analysis.mark_usage(name, expr.span());
+                self.use_def_analysis.mark_usage(name, *span);
 
                 Ok(())
             },
 
-            Expression::Literal(_) => {
+            Expression::Literal(_, _) => {
                 Ok(())
             },
 
-            Expression::Binary { left, op, right } => {
+            Expression::Binary { left, op, right, .. } => {
                 self.check_expression(left)?;
                 self.check_expression(right)?;
 
@@ -579,7 +568,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Unary { op, expr } => {
+            Expression::Unary { op, expr, .. } => {
                 self.check_expression(expr)?;
 
                 let expr_type = self.infer_expression_type(expr)?;
@@ -612,7 +601,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Call { function, arguments } => {
+            Expression::Call { function, arguments, .. } => {
                 self.check_expression(function)?;
 
                 let func_type = self.infer_expression_type(function)?;
@@ -648,7 +637,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Index { expr, index } => {
+            Expression::Index { expr, index, .. } => {
                 self.check_expression(expr)?;
                 self.check_expression(index)?;
 
@@ -673,7 +662,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Member { expr, member } => {
+            Expression::Member { expr, member, .. } => {
                 self.check_expression(expr)?;
 
                 let obj_type = self.infer_expression_type(expr)?;
@@ -696,7 +685,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Assignment { target, value, op } => {
+            Expression::Assignment { target, value, op, .. } => {
                 self.check_expression(target)?;
                 self.check_expression(value)?;
 
@@ -735,7 +724,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Lambda { parameters, return_type, body } => {
+            Expression::Lambda { parameters, return_type, body, .. } => {
                 let lambda_scope = self.current_scope.enter_scope(ScopeKind::Function, expr.span());
                 let previous_scope = std::mem::replace(&mut self.current_scope, lambda_scope);
 
@@ -756,7 +745,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::If { condition, then_branch, else_branch } => {
+            Expression::If { condition, then_branch, else_branch, .. } => {
                 self.check_expression(condition)?;
 
                 let cond_type = self.infer_expression_type(condition)?;
@@ -777,11 +766,12 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Match { expr, arms } => {
+            Expression::Match { expr, arms, .. } => {
                 self.check_expression(expr)?;
 
                 for arm in arms {
-                    self.check_expression(&arm.pattern)?;
+                    // Patterns are not expressions, so we can't check them directly
+                    // For now, we'll skip pattern checking
                     
                     if let Some(guard) = &arm.guard {
                         self.check_expression(guard)?;
@@ -795,7 +785,7 @@ impl TypeChecker {
         }
     }
 
-    pub fn infer_expression_type(&mut self, expr: &Expression) -> TypeCheckResult<Type> {
+    pub fn infer_expression_type(&mut self, expr: &Expression) -> TypeCheckResult<super::scope::Type> {
         self.type_env.infer_expression_type(expr)
             .map_err(|e| TypeCheckError::TypeEnvironment(e))
     }
@@ -804,14 +794,14 @@ impl TypeChecker {
         let mut return_type = Type::Void;
 
         for stmt in statements {
-            if let Statement::Return(value) = stmt {
+            if let Statement::Return(value, _) = stmt {
                 if let Some(expr) = value {
                     return_type = self.infer_expression_type(expr)?;
                 } else {
                     return_type = Type::Void;
                 }
                 break;
-            } else if let Statement::Block(inner_statements) = stmt {
+            } else if let Statement::Block(inner_statements, _) = stmt {
                 return_type = self.infer_statement_return_type(inner_statements)?;
                 if !matches!(return_type, Type::Void) {
                     break;

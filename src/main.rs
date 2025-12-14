@@ -17,13 +17,6 @@ use parser::Parser;
 use lexer::Lexer;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut lexer = Lexer::new("");
-    let mut parser = Parser::new(lexer);
-    let mut type_checker = TypeChecker::new();
-    let mut optimizer = OptimizationPipeline::default();
-    let mut code_generator = CodeGenerationPipeline::default();
-    let mut vm_env = VirtualMachineEnvironment::new();
-    
     let args: Vec<String> = std::env::args().collect();
     let input_path = if args.len() > 1 {
         &args[1]
@@ -39,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Compiling program from: {}", input_path);
         println!("=====================================");
     } else {
-        eprintln!("Error: File '{}' not found. Using default program.", input_path);
+        eprintln!("Warning: File '{}' not found. Using default program.", input_path);
         println!("=====================================");
         
         source = r#"
@@ -60,14 +53,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     println!("1. Lexing...");
-    let mut lexer = Lexer::new(&source);
-    let tokens = lexer.lex()?;
+    let lexer = Lexer::new(&source);
+    let tokens = lexer.tokenize()?;
     
     println!("2. Parsing...");
-    let mut parser = Parser::new(lexer);
-    let program = parser.parse(tokens)?;
+    let mut parser = Parser::new(&source)?;
+    let program = parser.parse()?;
     
     println!("3. Type checking...");
+    let mut type_checker = TypeChecker::new();
     type_checker.check_program(&program)?;
     
     if !type_checker.get_errors().is_empty() {
@@ -79,13 +73,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     println!("4. Optimizing...");
-    optimizer.optimize(&mut program.clone())?;
+    let mut optimizer = OptimizationPipeline::default();
+    let mut optimized_program = program.clone();
+    optimizer.optimize(&mut optimized_program)?;
     
     println!("5. Code generation...");
-    code_generator.generate(&program)?;
+    let mut code_generator = CodeGenerationPipeline::default();
+    code_generator.generate(&optimized_program)?;
     
     println!("6. Executing...");
-    vm_env.load_program(&program)?;
+    let mut vm_env = VirtualMachineEnvironment::new();
+    vm_env.load_program(&optimized_program)?;
     
     match vm_env.execute() {
         Ok(()) => {

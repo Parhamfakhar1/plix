@@ -77,11 +77,11 @@ impl Scope {
 
     pub fn define_variable(&mut self, name: String, type_: Type, mutable: bool, span: Span) -> Result<(), ScopeError> {
         if self.variables.contains_key(&name) {
-            return Err(ScopeError::VariableAlreadyDefined { name, span });
+            return Err(ScopeError::VariableAlreadyDefined { name: name.clone(), span });
         }
 
-        self.variables.insert(name, VariableInfo {
-            name: name.clone(),
+        self.variables.insert(name.clone(), VariableInfo {
+            name,
             type_,
             mutable,
             defined_in: self.kind.clone(),
@@ -94,11 +94,11 @@ impl Scope {
 
     pub fn define_function(&mut self, name: String, parameters: Vec<ParameterInfo>, return_type: Type, span: Span) -> Result<(), ScopeError> {
         if self.functions.contains_key(&name) {
-            return Err(ScopeError::FunctionAlreadyDefined { name, span });
+            return Err(ScopeError::FunctionAlreadyDefined { name: name.clone(), span });
         }
 
-        self.functions.insert(name, FunctionInfo {
-            name: name.clone(),
+        self.functions.insert(name.clone(), FunctionInfo {
+            name,
             parameters,
             return_type,
             defined_in: self.kind.clone(),
@@ -133,7 +133,8 @@ impl Scope {
             var_info.used = true;
             Ok(())
         } else if let Some(parent) = &self.parent {
-            Rc::make_mut(parent).mark_variable_used(name)
+            let parent_scope = Rc::make_mut(parent);
+            parent_scope.mark_variable_used(name)
         } else {
             Err(ScopeError::VariableNotFound { name: name.to_string() })
         }
@@ -165,7 +166,7 @@ impl Scope {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone)]
 pub enum ScopeError {
     #[error("Variable '{name}' already defined at {span}")]
     VariableAlreadyDefined { name: String, span: Span },
@@ -312,7 +313,7 @@ impl From<AstType> for Type {
             AstType::Object(fields) => {
                 let mut field_map = HashMap::new();
                 for (name, ty) in fields {
-                    field_map.insert(name, (*ty).into());
+                    field_map.insert(name, ty.into());
                 }
                 Type::Object(field_map)
             },

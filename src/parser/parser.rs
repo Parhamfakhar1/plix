@@ -111,6 +111,7 @@ impl Parser {
             return_type,
             body,
             async_flag: false,
+            span: Span::default(),
         })
     }
     
@@ -131,6 +132,7 @@ impl Parser {
             name,
             type_annotation,
             value,
+            span: Span::default(),
         })
     }
     
@@ -152,6 +154,7 @@ impl Parser {
             name,
             type_annotation,
             value,
+            span: Span::default(),
         })
     }
     
@@ -181,6 +184,7 @@ impl Parser {
             then_branch,
             elif_branches,
             else_branch,
+            span: Span::default(),
         })
     }
     
@@ -191,7 +195,7 @@ impl Parser {
             None
         };
         
-        Ok(Statement::Return(value))
+        Ok(Statement::Return(value, Span::default()))
     }
     
     fn parse_possible_assignment(&mut self) -> CompilerResult<Option<Statement>> {
@@ -204,10 +208,11 @@ impl Parser {
                 name,
                 type_annotation: None,
                 value,
+                span: Span::default(),
             }))
         } else {
             let expr = self.parse_expression()?;
-            Ok(Some(Statement::Expression(expr)))
+            Ok(Some(Statement::Expression(expr, Span::default())))
         }
     }
     
@@ -238,19 +243,23 @@ impl Parser {
         
         if self.match_token(TokenKind::Assign) {
             let value = self.parse_assignment()?;
+            let span = expr.span().merge(value.span());
             return Ok(Expression::Assignment {
                 target: Box::new(expr),
                 op: None,
                 value: Box::new(value),
+                span,
             });
         } else if self.match_compound_assignment() {
             let op = self.previous_op();
             self.expect(TokenKind::Assign, "=")?;
             let value = self.parse_assignment()?;
+            let span = expr.span().merge(value.span());
             return Ok(Expression::Assignment {
                 target: Box::new(expr),
                 op: Some(op),
                 value: Box::new(value),
+                span,
             });
         }
         
@@ -332,9 +341,9 @@ impl Parser {
         } else if self.match_token(TokenKind::False) {
             return Ok(Expression::boolean(false));
         } else if self.match_token(TokenKind::Null) {
-            return Ok(Expression::Literal(Literal::Null));
+            return Ok(Expression::Literal(Literal::Null, Span::default()));
         } else if self.match_token(TokenKind::Undefined) {
-            return Ok(Expression::Literal(Literal::Undefined));
+            return Ok(Expression::Literal(Literal::Undefined, Span::default()));
         } else if self.match_token(TokenKind::Identifier("".to_string())) {
             if let TokenKind::Identifier(name) = self.previous().kind.clone() {
                 return Ok(Expression::identifier(name));

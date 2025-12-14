@@ -220,14 +220,17 @@ impl<'a> Lexer<'a> {
                 Some('*') => {
                     if self.input.peek() == Some(&'#') {
                         depth -= 1;
+                        self.next_char(); // consume the '#'
                     }
                 }
                 Some('#') => {
                     if self.input.peek() == Some(&'*') {
                         depth += 1;
+                        self.next_char(); // consume the '*'
                     }
                 }
                 Some(_) => {
+                    // Continue scanning
                 }
                 None => {
                     return Err(LexerError::UnterminatedComment {
@@ -255,6 +258,7 @@ impl<'a> Lexer<'a> {
             match ch {
                 '"' => {
                     lexeme.push('"');
+                    self.next_char();
                     terminated = true;
                     break;
                 }
@@ -328,11 +332,12 @@ impl<'a> Lexer<'a> {
             }.into());
         }
         
-        if self.input.next() != Some('\'') {
+        if self.input.peek() != Some(&'\'') {
             return Err(LexerError::UnterminatedString {
                 position: start_pos,
             }.into());
         }
+        self.next_char();
         lexeme.push('\'');
         
         Ok(self.create_token_with_pos(
@@ -763,7 +768,9 @@ impl<'a> Lexer<'a> {
         
         match self.input.peek() {
             Some(&'.') => {
+                self.next_char();
                 if self.input.peek() == Some(&'.') {
+                    self.next_char();
                     Ok(self.create_token_with_pos(
                         TokenKind::Ellipsis,
                         "...".to_string(),

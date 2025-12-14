@@ -65,28 +65,28 @@ impl TypeEnvironment {
         Ok(())
     }
 
-    pub fn infer_expression_type(&self, expr: &Expression) -> Result<Type, TypeEnvironmentError> {
+    pub fn infer_expression_type(&self, expr: &super::super::parser::ast::Expression) -> Result<Type, TypeEnvironmentError> {
         match expr {
-            Expression::Identifier(name) => {
+            super::super::parser::ast::Expression::Identifier(name, _) => {
                 self.lookup_type(name)
                     .ok_or_else(|| TypeEnvironmentError::UnknownType { name: name.clone() })
             },
             
-            Expression::Literal(literal) => self.infer_literal_type(literal),
+            super::super::parser::ast::Expression::Literal(literal, _) => self.infer_literal_type(literal),
             
-            Expression::Binary { left, op, right } => {
+            super::super::parser::ast::Expression::Binary { left, op, right, .. } => {
                 let left_type = self.infer_expression_type(left)?;
                 let right_type = self.infer_expression_type(right)?;
                 
                 self.infer_binary_op_type(op, &left_type, &right_type)
             },
             
-            Expression::Unary { op, expr } => {
+            super::super::parser::ast::Expression::Unary { op, expr, .. } => {
                 let expr_type = self.infer_expression_type(expr)?;
                 self.infer_unary_op_type(op, &expr_type)
             },
             
-            Expression::Call { function, arguments } => {
+            super::super::parser::ast::Expression::Call { function, arguments, .. } => {
                 let func_type = self.infer_expression_type(function)?;
                 
                 if let Type::Function(params, return_type) = func_type {
@@ -115,7 +115,7 @@ impl TypeEnvironment {
                 }
             },
             
-            Expression::Index { expr, index } => {
+            super::super::parser::ast::Expression::Index { expr, index, .. } => {
                 let array_type = self.infer_expression_type(expr)?;
                 let index_type = self.infer_expression_type(index)?;
                 
@@ -134,7 +134,7 @@ impl TypeEnvironment {
                 }
             },
             
-            Expression::Member { expr, member } => {
+            super::super::parser::ast::Expression::Member { expr, member, .. } => {
                 let obj_type = self.infer_expression_type(expr)?;
                 
                 if let Type::Object(fields) = obj_type {
@@ -151,12 +151,12 @@ impl TypeEnvironment {
                 }
             },
             
-            Expression::Assignment { target, value, .. } => {
+            super::super::parser::ast::Expression::Assignment { target, value, .. } => {
                 let value_type = self.infer_expression_type(value)?;
                 Ok(value_type)
             },
             
-            Expression::Lambda { parameters, return_type, .. } => {
+            super::super::parser::ast::Expression::Lambda { parameters, return_type, .. } => {
                 let param_types: Vec<Type> = parameters
                     .iter()
                     .map(|p| {
@@ -175,7 +175,7 @@ impl TypeEnvironment {
                 Ok(Type::Function(param_types, Box::new(return_type)))
             },
             
-            Expression::If { condition, then_branch, else_branch } => {
+            super::super::parser::ast::Expression::If { condition, then_branch, else_branch, .. } => {
                 let cond_type = self.infer_expression_type(condition)?;
                 if !cond_type.is_boolean() && !cond_type.is_compatible_with(&Type::Any) {
                     return Err(TypeEnvironmentError::InvalidConditionType {
@@ -194,7 +194,7 @@ impl TypeEnvironment {
                 Ok(Type::Union(vec![then_type, else_type]))
             },
             
-            Expression::Match { expr, arms } => {
+            super::super::parser::ast::Expression::Match { expr, arms, .. } => {
                 let expr_type = self.infer_expression_type(expr)?;
                 let mut arm_types = Vec::new();
                 
@@ -208,15 +208,15 @@ impl TypeEnvironment {
         }
     }
 
-    fn infer_literal_type(&self, literal: &Literal) -> Result<Type, TypeEnvironmentError> {
+    fn infer_literal_type(&self, literal: &super::super::parser::ast::Literal) -> Result<Type, TypeEnvironmentError> {
         match literal {
-            Literal::Integer(_) => Ok(Type::Number),
-            Literal::Float(_) => Ok(Type::Number),
-            Literal::String(_) => Ok(Type::String),
-            Literal::Boolean(_) => Ok(Type::Boolean),
-            Literal::Null => Ok(Type::Null),
-            Literal::Undefined => Ok(Type::Undefined),
-            Literal::Array(elements) => {
+            super::super::parser::ast::Literal::Integer(_) => Ok(Type::Number),
+            super::super::parser::ast::Literal::Float(_) => Ok(Type::Number),
+            super::super::parser::ast::Literal::String(_) => Ok(Type::String),
+            super::super::parser::ast::Literal::Boolean(_) => Ok(Type::Boolean),
+            super::super::parser::ast::Literal::Null => Ok(Type::Null),
+            super::super::parser::ast::Literal::Undefined => Ok(Type::Undefined),
+            super::super::parser::ast::Literal::Array(elements) => {
                 if elements.is_empty() {
                     Ok(Type::Array(Box::new(Type::Any)))
                 } else {
@@ -232,7 +232,7 @@ impl TypeEnvironment {
                     Ok(Type::Array(Box::new(first_type)))
                 }
             },
-            Literal::Object(fields) => {
+            super::super::parser::ast::Literal::Object(fields) => {
                 let mut field_types = HashMap::new();
                 
                 for (name, value) in fields {
@@ -369,7 +369,7 @@ impl TypeEnvironment {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone)]
 pub enum TypeEnvironmentError {
     #[error("Type '{name}' is already defined")]
     TypeAlreadyDefined { name: String },
@@ -421,6 +421,9 @@ pub enum TypeEnvironmentError {
     
     #[error("Invalid operand for unary operator '{op}': type '{type_}'")]
     InvalidUnaryOperand { op: String, type_: String },
+    
+    #[error("Invalid comparison operands: {left} and {right}")]
+    InvalidComparisonOperands { left: String, right: String },
 }
 
-use crate::parser::ast::{Expression, Literal, BinaryOp, UnaryOp};
+use crate::parser::ast::{Expression as AstExpression, Literal as AstLiteral, BinaryOp, UnaryOp};
