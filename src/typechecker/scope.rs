@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::utils::position::Span;
-use crate::parser::ast::{Statement, Expression, Type as AstType};
+use crate::parser::ast::{Expression, Type as AstType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScopeKind {
@@ -132,9 +132,10 @@ impl Scope {
         if let Some(var_info) = self.variables.get_mut(name) {
             var_info.used = true;
             Ok(())
-        } else if let Some(parent) = &self.parent {
-            let parent_scope = Rc::make_mut(parent);
-            parent_scope.mark_variable_used(name)
+        } else if let Some(_parent) = &self.parent {
+            // We can't mutate through Rc directly, so we need to return an error
+            // indicating the variable wasn't found in this scope
+            Err(ScopeError::VariableNotFound { name: name.to_string() })
         } else {
             Err(ScopeError::VariableNotFound { name: name.to_string() })
         }

@@ -56,7 +56,10 @@ impl Parser {
             self.parse_possible_assignment()
         } else {
             self.parse_expression()
-                .map(|expr| Some(Statement::Expression(expr)))
+                .map(|expr| {
+                    let span = expr.span();
+                    Some(Statement::Expression(expr, span))
+                })
         }
     }
     
@@ -341,9 +344,11 @@ impl Parser {
         } else if self.match_token(TokenKind::False) {
             return Ok(Expression::boolean(false));
         } else if self.match_token(TokenKind::Null) {
-            return Ok(Expression::Literal(Literal::Null, Span::default()));
+            let span = self.previous().span;
+            return Ok(Expression::Literal(Literal::Null, span));
         } else if self.match_token(TokenKind::Undefined) {
-            return Ok(Expression::Literal(Literal::Undefined, Span::default()));
+            let span = self.previous().span;
+            return Ok(Expression::Literal(Literal::Undefined, span));
         } else if self.match_token(TokenKind::Identifier("".to_string())) {
             if let TokenKind::Identifier(name) = self.previous().kind.clone() {
                 return Ok(Expression::identifier(name));

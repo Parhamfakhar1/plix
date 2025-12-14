@@ -176,7 +176,7 @@ impl UseDefAnalysis {
 
     pub fn analyze_statement(&mut self, stmt: &Statement) {
         match stmt {
-            Statement::Variable { mutable: _, name, type_annotation: _, value, span: _ } => {
+            Statement::Variable { mutable: _, name, type_annotation: _, value, span } => {
                 let def = self.define_variable(name.clone(), *span);
                 
                 self.analyze_expression(value);
@@ -184,7 +184,7 @@ impl UseDefAnalysis {
                 self.collect_expression_dependencies(value, &def.name);
             },
             
-            Statement::Constant { name, type_annotation: _, value, span: _ } => {
+            Statement::Constant { name, type_annotation: _, value, span } => {
                 let def = self.define_constant(name.clone(), *span);
                 
                 self.analyze_expression(value);

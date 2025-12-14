@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-use crate::utils::error::{CompilerError, CompilerResult};
-use crate::utils::position::Span;
-use super::scope::{Type, ScopeError};
+use super::scope::Type;
+use crate::parser::ast::{BinaryOp, UnaryOp};
 
 #[derive(Debug, Clone)]
 pub struct TypeEnvironment {
@@ -137,7 +136,7 @@ impl TypeEnvironment {
             super::super::parser::ast::Expression::Member { expr, member, .. } => {
                 let obj_type = self.infer_expression_type(expr)?;
                 
-                if let Type::Object(fields) = obj_type {
+                if let Type::Object(fields) = &obj_type {
                     fields.get(member)
                         .cloned()
                         .ok_or_else(|| TypeEnvironmentError::UnknownField {
@@ -162,14 +161,14 @@ impl TypeEnvironment {
                     .map(|p| {
                         p.type_annotation
                             .clone()
+                            .map(|ast_type| Type::from(ast_type))
                             .unwrap_or_else(|| Type::Any)
-                            .into()
                     })
                     .collect();
                 
                 let return_type = return_type
                     .as_ref()
-                    .map(|rt| rt.clone().into())
+                    .map(|rt| Type::from(rt.clone()))
                     .unwrap_or_else(|| Type::Void);
                 
                 Ok(Type::Function(param_types, Box::new(return_type)))
@@ -425,5 +424,3 @@ pub enum TypeEnvironmentError {
     #[error("Invalid comparison operands: {left} and {right}")]
     InvalidComparisonOperands { left: String, right: String },
 }
-
-use crate::parser::ast::{Expression as AstExpression, Literal as AstLiteral, BinaryOp, UnaryOp};
