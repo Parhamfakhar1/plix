@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use crate::utils::position::Span;
-use crate::parser::ast::{Statement, Expression, Parameter};
+use crate::parser::ast::{Statement, Expression};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DefinitionKind {
@@ -212,7 +212,7 @@ impl UseDefAnalysis {
                 
                 self.exit_scope();
                 
-                self.collect_statement_dependencies(body, &def.name);
+                self.collect_statement_dependencies(body.iter().map(|b| b.as_ref()).collect::<Vec<_>>(), &def.name);
             },
             
             Statement::If { condition, then_branch, elif_branches, else_branch, span: _ } => {
@@ -668,6 +668,7 @@ impl UseDefAnalysis {
         
         while let Some(def) = self.definitions.get(current) {
             if visited.contains(current) {
+                break;
             }
             
             visited.insert(current.to_string());

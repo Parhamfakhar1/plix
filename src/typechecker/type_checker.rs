@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use crate::utils::error::{CompilerError, CompilerResult};
+use crate::utils::error::CompilerError;
 use crate::utils::position::Span;
 use crate::parser::ast::{Statement, Expression, Program};
 use super::scope::{Scope, ScopeKind, Type, ScopeError};
@@ -102,17 +102,17 @@ impl TypeChecker {
                     .map(|p| {
                         p.type_annotation
                             .clone()
-                            .unwrap_or_else(|| Type::Any)
+                            .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
                             .into()
                     })
                     .collect();
 
-                let return_type = return_type
+                let return_type_clone = return_type
                     .as_ref()
                     .map(|rt| rt.clone().into())
                     .unwrap_or_else(|| Type::Void);
 
-                let func_type = Type::Function(param_types.clone(), Box::new(return_type));
+                let func_type = Type::Function(param_types.clone(), Box::new(return_type_clone.clone()));
 
                 let current_scope = Rc::make_mut(&mut self.current_scope);
                 current_scope.define_function(
@@ -125,7 +125,7 @@ impl TypeChecker {
                             default_value: param.default_value.clone(),
                         })
                         .collect(),
-                    return_type,
+                    return_type_clone,
                     stmt.span()
                 )?;
 
@@ -138,7 +138,7 @@ impl TypeChecker {
                 for field in fields {
                     let field_type = field.type_annotation
                         .clone()
-                        .unwrap_or_else(|| Type::Any)
+                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
                         .into();
                     field_types.insert(field.name.clone(), field_type);
                 }
@@ -164,7 +164,7 @@ impl TypeChecker {
             Statement::Import { .. } => {
             },
 
-            Statement::Block(statements) => {
+            Statement::Block(statements, _) => {
                 let block_scope = self.current_scope.enter_scope(ScopeKind::Block, stmt.span());
                 let previous_scope = std::mem::replace(&mut self.current_scope, block_scope);
 
@@ -240,12 +240,12 @@ impl TypeChecker {
                     let param_type = param.type_annotation
                         .clone()
                         .map(|t| Type::from(t))
-                        .unwrap_or_else(|| Type::Any);
+                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into());
 
                     let current_scope = Rc::make_mut(&mut self.current_scope);
-                    current_scope.define_variable(param.name.clone(), param_type.clone(), false, param.span.unwrap_or(*span))?;
+                    current_scope.define_variable(param.name.clone(), param_type.clone(), false, *span)?;
 
-                    self.use_def_analysis.define_parameter(param.name.clone(), param.span.unwrap_or(*span));
+                    self.use_def_analysis.define_parameter(param.name.clone(), *span);
                 }
 
                 for stmt in body {
@@ -434,7 +434,7 @@ impl TypeChecker {
                 for field in fields {
                     let field_type = field.type_annotation
                         .clone()
-                        .unwrap_or_else(|| Type::Any)
+                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
                         .into();
                     field_types.insert(field.name.clone(), field_type);
                 }
@@ -731,11 +731,11 @@ impl TypeChecker {
                 for param in parameters {
                     let param_type = param.type_annotation
                         .clone()
-                        .unwrap_or_else(|| Type::Any)
+                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
                         .into();
 
                     let current_scope = Rc::make_mut(&mut self.current_scope);
-                    current_scope.define_variable(param.name.clone(), param_type, false, param.span.unwrap_or_else(|| expr.span()))?;
+                    current_scope.define_variable(param.name.clone(), param_type, false, expr.span())?;
                 }
 
                 self.check_statement(body)?;
@@ -837,6 +837,7 @@ impl TypeChecker {
             if !cycle.is_empty() {
                 self.errors.push(TypeCheckError::new(
                     format!("Circular dependency detected: {}", cycle.join(" -> ")),
+                    Span::default()
                 ));
             }
         }
