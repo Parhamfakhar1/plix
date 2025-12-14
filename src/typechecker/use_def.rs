@@ -212,7 +212,7 @@ impl UseDefAnalysis {
                 
                 self.exit_scope();
                 
-                self.collect_statement_dependencies(body.iter().map(|b| b.as_ref()).collect::<Vec<_>>(), &def.name);
+                self.collect_statement_dependencies(body.iter().collect::<Vec<_>>(), &def.name);
             },
             
             Statement::If { condition, then_branch, elif_branches, else_branch, span: _ } => {
