@@ -1,0 +1,34 @@
+// Smart Mutability™ Example 2: Safe Aliasing + Mutation
+// This example demonstrates safe mutation when variables are properly aliased
+
+// Create a variable and safely alias it
+data = [1, 2, 3, 4, 5]
+print("Original data: ${data}")
+
+// Create an alias - this is safe as long as we don't have conflicting mutations
+list_ref = data
+print("List reference: ${list_ref}")
+
+// Safe mutation - only one mutable reference exists
+data = [10, 20, 30]
+print("Updated data: ${data}")
+print("List reference after update: ${list_ref}")
+
+// Another example with function parameters
+def process_array(arr):
+    // arr is an immutable reference inside the function
+    sum = 0
+    for item in arr:
+        sum = sum + item
+    return sum
+
+numbers = [1, 2, 3, 4, 5]
+total = process_array(numbers)
+print("Sum of numbers: ${total}")
+
+// Safe mutation after function call
+numbers = [10, 20, 30]
+print("Numbers after mutation: ${numbers}")
+
+// Expected behavior: All operations should compile successfully
+// The compiler tracks that aliases don't conflict with mutations

@@ -1,0 +1,26 @@
+// Smart Mutability™ Example 1: Basic Reassignment
+// This example demonstrates basic variable reassignment without explicit mut keyword
+
+// Variable declared without mut/const - compiler infers immutability based on usage
+x = 5
+print("x is: ${x}")
+
+// Reassignment is safe since x is only used in one place
+x = 10
+print("x is now: ${x}")
+
+// Another example with different types
+message = "Hello"
+print("Message: ${message}")
+
+message = "Hello, World!"
+print("Updated message: ${message}")
+
+// Numbers and calculations
+count = 0
+count = count + 1
+count += 1  // Compound assignment also works
+print("Count: ${count}")
+
+// Expected behavior: All reassignments should compile successfully
+// The compiler infers that these variables are mutable because they are reassigned

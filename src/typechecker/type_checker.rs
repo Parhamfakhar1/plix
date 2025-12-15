@@ -6,6 +6,7 @@ use crate::parser::ast::{Statement, Expression, Program};
 use super::scope::{Scope, ScopeKind, Type, ScopeError};
 use super::types::{TypeEnvironment, TypeEnvironmentError};
 use super::use_def::{UseDefAnalysis, DefinitionKind};
+use super::smart_mutability::SmartMutabilityChecker;
 
 pub type TypeCheckResult<T> = Result<T, TypeCheckError>;
 
@@ -59,6 +60,14 @@ impl TypeChecker {
         self.check_unused_definitions();
 
         self.check_circular_dependencies();
+
+        // Check Smart Mutability™ rules
+        let mut smart_checker = SmartMutabilityChecker::new();
+        if let Err(mutability_errors) = smart_checker.check_program(program) {
+            for error in mutability_errors {
+                self.errors.push(TypeCheckError::new(error, Span::default()));
+            }
+        }
 
         if !self.errors.is_empty() {
             Err(self.errors.remove(0))

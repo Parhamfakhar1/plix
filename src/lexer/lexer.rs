@@ -67,7 +67,7 @@ impl<'a> Lexer<'a> {
             
             '0'..='9' => self.scan_number(),
             
-            'a'..='z' | 'A'..='Z' | '_' => self.scan_identifier(),
+            'a'..='z' | 'A'..='Z' | '_' | '$' => self.scan_identifier(),
             
             '+' => self.scan_plus(),
             '-' => self.scan_minus(),
@@ -100,16 +100,13 @@ impl<'a> Lexer<'a> {
                 token
             }
             '\r' => {
+                self.next_char();
                 if self.input.peek() == Some(&'\n') {
-                    let token = self.consume_char(TokenKind::Newline);
-                    self.is_start_of_line = true;
-                    token
-                } else {
-                    return Err(LexerError::UnexpectedCharacter {
-                        character: '\r',
-                        position: start_pos,
-                    }.into());
+                    self.next_char();
                 }
+                let token = self.create_token_with_pos(TokenKind::Newline, "\n".to_string(), start_pos, self.current_pos);
+                self.is_start_of_line = true;
+                Ok(token)
             }
             
             ch => {

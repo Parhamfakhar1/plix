@@ -1,0 +1,69 @@
+// Smart Mutability™ Example 4: Mutation Inside Functions and Parameter Passing
+// This example demonstrates how Smart Mutability™ works with function calls and parameters
+
+// Example 1: Function that takes and mutates a parameter
+def increment_value(num):
+    num = num + 1  // Local mutation is safe
+    return num
+
+value = 42
+result = increment_value(value)
+print("Original value: ${value}")  // Should still be 42
+print("Result: ${result}")         // Should be 43
+
+// Example 2: Function that returns a new value
+def double_array(arr):
+    new_array = []
+    for item in arr:
+        new_array = new_array + [item * 2]
+    return new_array
+
+original = [1, 2, 3, 4, 5]
+doubled = double_array(original)
+print("Original: ${original}")  // Should be [1, 2, 3, 4, 5]
+print("Doubled: ${doubled}")    // Should be [2, 4, 6, 8, 10]
+
+// Example 3: Safe mutation after function returns
+data = [10, 20, 30]
+processed = double_array(data)
+data = [100, 200, 300]  // Safe to mutate after function call
+print("Data after mutation: ${data}")
+
+// Example 4: Function with multiple parameters
+def combine_arrays(first, second):
+    combined = first
+    for item in second:
+        combined = combined + [item]
+    return combined
+
+array1 = [1, 2, 3]
+array2 = [4, 5, 6]
+result_array = combine_arrays(array1, array2)
+print("Combined: ${result_array}")
+
+// Safe to mutate originals after function call
+array1 = [10, 20]
+array2 = [30, 40]
+print("Array1 after mutation: ${array1}")
+print("Array2 after mutation: ${array2}")
+
+// Example 5: Nested function calls
+def square(x):
+    return x * x
+
+def process_number(n):
+    squared = square(n)
+    incremented = squared + 1
+    return incremented
+
+number = 5
+final_result = process_number(number)
+print("Final result: ${final_result}")  // Should be 26 (5*5 + 1)
+
+// Safe to mutate after all processing
+number = 10
+print("Number after mutation: ${number}")
+
+// Expected behavior: All operations should compile successfully
+// The compiler should track that function parameters are safely isolated
+// from the original variables and that mutations are safe after function returns
