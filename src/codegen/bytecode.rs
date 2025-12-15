@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::parser::ast::{Program, Statement, Expression};
 use crate::utils::error::CompilerResult;
 

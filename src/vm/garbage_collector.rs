@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// Simple stub garbage collector used to make the VM API compile.
 #[derive(Debug, Clone, Copy)]
 pub enum GCStrategy {

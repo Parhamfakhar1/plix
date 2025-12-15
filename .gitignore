@@ -1,6 +1,0 @@
-target/
-tests/
-benches/
-# File
-Cargo.lock
-.gitignore

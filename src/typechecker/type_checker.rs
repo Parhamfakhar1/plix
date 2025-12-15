@@ -1,5 +1,6 @@
+#![allow(dead_code)]
+
 use std::rc::Rc;
-use crate::utils::error::CompilerError;
 use crate::utils::position::Span;
 use crate::parser::ast::{Statement, Expression, Program};
 use super::scope::{Scope, ScopeKind, Type, ScopeError};
@@ -724,7 +725,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::Lambda { parameters, return_type, body, .. } => {
+            Expression::Lambda { parameters, return_type: _return_type, body, .. } => {
                 let lambda_scope = self.current_scope.enter_scope(ScopeKind::Function, expr.span());
                 let previous_scope = std::mem::replace(&mut self.current_scope, lambda_scope);
 

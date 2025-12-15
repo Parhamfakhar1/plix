@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use super::scope::Type;
 use crate::parser::ast::{BinaryOp, UnaryOp};

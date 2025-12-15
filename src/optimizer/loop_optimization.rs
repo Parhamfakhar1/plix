@@ -4,6 +4,7 @@ use crate::utils::position::Span;
 use super::Optimizer;
 
 pub struct LoopOptimizer {
+    #[allow(dead_code)]
     loop_invariants: std::collections::HashMap<String, Expression>,
 }
 
@@ -100,7 +101,7 @@ impl LoopOptimizer {
                 Statement::Return(_, _) => {
                     true
                 },
-                Statement::If { condition, then_branch, elif_branches, else_branch, .. } => {
+                Statement::If { condition: _condition, then_branch, elif_branches, else_branch, .. } => {
                     self.optimize_loop_body(then_branch, loop_depth);
                     
                     for (_, elif_body) in elif_branches {

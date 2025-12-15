@@ -4,6 +4,7 @@ use crate::utils::position::Span;
 use super::Optimizer;
 
 pub struct ConstantFoldingOptimizer {
+    #[allow(dead_code)]
     constant_values: std::collections::HashMap<String, Literal>,
 }
 
@@ -318,6 +319,7 @@ impl ConstantFoldingOptimizer {
         }
     }
 
+    #[allow(dead_code)]
     fn is_constant_expression(&self, expr: &Expression) -> bool {
         matches!(expr, Expression::Literal(_, _))
     }

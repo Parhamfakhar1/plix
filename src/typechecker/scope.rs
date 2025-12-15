@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::utils::position::Span;
@@ -118,6 +120,7 @@ impl Scope {
         }
     }
 
+    #[allow(dead_code)]
     pub fn lookup_function(&self, name: &str) -> Option<FunctionInfo> {
         if let Some(func_info) = self.functions.get(name) {
             Some(func_info.clone())
@@ -128,6 +131,7 @@ impl Scope {
         }
     }
 
+    #[allow(dead_code)]
     pub fn mark_variable_used(&mut self, name: &str) -> Result<(), ScopeError> {
         if let Some(var_info) = self.variables.get_mut(name) {
             var_info.used = true;
@@ -141,6 +145,7 @@ impl Scope {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_all_variables(&self) -> Vec<VariableInfo> {
         let mut variables = self.variables.values().cloned().collect::<Vec<_>>();
         
@@ -151,6 +156,7 @@ impl Scope {
         variables
     }
 
+    #[allow(dead_code)]
     pub fn get_unused_variables(&self) -> Vec<VariableInfo> {
         self.get_all_variables()
             .into_iter()
@@ -162,6 +168,7 @@ impl Scope {
         Rc::new(Scope::new(kind, Some(Rc::new(self.clone())), span))
     }
 
+    #[allow(dead_code)]
     pub fn is_global(&self) -> bool {
         matches!(self.kind, ScopeKind::Global)
     }

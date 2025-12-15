@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::{HashMap, HashSet};
 use crate::utils::position::Span;
 use crate::parser::ast::Statement;
@@ -54,8 +56,10 @@ impl Definition {
 #[derive(Debug, Clone)]
 pub struct UseDefAnalysis {
     pub definitions: HashMap<String, Definition>,
+    #[allow(dead_code)]
     pub scope_stack: Vec<usize>,
     pub current_scope_id: usize,
+    #[allow(dead_code)]
     pub scope_counter: usize,
     pub call_graph: HashMap<String, HashSet<String>>,
     pub ast_dependents: HashMap<String, Vec<String>>,
@@ -276,7 +280,7 @@ impl UseDefAnalysis {
             Statement::Match { expr, arms, span: _ } => {
                 self.analyze_expression(expr);
                 
-                let match_scope = self.enter_scope();
+                let _match_scope = self.enter_scope();
                 
                 for arm in arms {
                     // Patterns are not expressions, so we can't analyze them as expressions

@@ -56,11 +56,11 @@ impl TreeShakingOptimizer {
                 self.collect_used_symbols(value);
             },
             Expression::Lambda { parameters, return_type: _, body, .. } => {
-                for _param in parameters {
-                    self.symbol_stack.push(_param.name.clone());
+                for param in parameters {
+                    self.symbol_stack.push(param.name.clone());
                 }
                 self.collect_used_symbols_from_statement(body);
-                for param in parameters {
+                for _ in 0..parameters.len() {
                     self.symbol_stack.pop();
                 }
             },
@@ -226,7 +226,7 @@ impl TreeShakingOptimizer {
                         false
                     }
                 },
-                Statement::Class { name, base, fields, methods, .. } => {
+                Statement::Class { name, base: _base, fields, methods, .. } => {
                     if self.is_symbol_used(name) {
                         for field in fields {
                             if !self.is_symbol_used(&field.name) {

@@ -12,6 +12,7 @@ use crate::utils::error::CompilerResult;
 pub trait Optimizer {
     fn optimize_program(&mut self, program: &mut Program) -> CompilerResult<()>;
     fn optimize_statement(&mut self, stmt: &mut Statement) -> CompilerResult<()>;
+    #[allow(dead_code)]
     fn optimize_expression(&mut self, expr: &mut Expression) -> CompilerResult<()>;
 }
 

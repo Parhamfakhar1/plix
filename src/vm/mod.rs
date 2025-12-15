@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod bytecode;
 pub mod garbage_collector;
 pub mod runtime;
