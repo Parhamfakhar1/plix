@@ -68,8 +68,4 @@ Forks or derivative works **must not** use the name "Plix" or present themselves
 
 ---
 
-> 📅 *Current Date: Tuesday, December 16, 2025*
-
----
-
 > ⚙️ *Ready to compile the future.*
