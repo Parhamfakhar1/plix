@@ -1,0 +1,33 @@
+🚀 Plix Language v1.3 – Introducing Smart Mutability™
+We’re proud to announce Plix v1.3, featuring the groundbreaking Smart Mutability™ system—a new paradigm in memory-safe programming that eliminates the friction between productivity and correctness.
+
+🔒 What is Smart Mutability™?
+No more mut or const declarations for local variables.
+Plix now automatically infers mutability from your code—and guarantees memory safety at compile time using region-based lifetime analysis.
+
+Write like Python.
+Compile like Rust.
+Run with confidence.
+
+✨ Key Highlights
+✅ Automatic mutability inference – declare with x = value, no keywords needed
+✅ Compile-time aliasing safety – at most one mutable reference per value
+✅ Clear, actionable error messages for unsafe patterns
+✅ Full backward compatibility – existing mut/const syntax still works
+✅ Zero runtime overhead – all checks happen during compilation
+📚 Learn with Examples
+We’ve included 5 educational examples to help you master Smart Mutability™:
+
+smart_mut_basic.px – The basics
+smart_mut_alias.px – Safe sharing
+smart_mut_conflict.px – What not to do (and why it fails)
+smart_mut_function.px – Safe function boundaries
+smart_mut_struct.px – Object mutation with guarantees
+🛠 Under the Hood
+Region-based lifetime tracking via RegionGraph
+Integrated into the type checker with minimal performance impact
+Designed with ergonomics and safety as first-class concerns
+Plix v1.3 redefines what it means to write safe, expressive code—without compromise.
+
+© 2025 Plix Language — Designed by Parham Fakhari
+Smart Mutability™ is a trademark of the Plix Language Project.
