@@ -1,6 +1,5 @@
 use crate::parser::ast::{Program, Statement, Expression, BinaryOp, UnaryOp, Literal};
-use crate::utils::error::{CompilerResult, CompilerError};
-use crate::utils::position::Span;
+use crate::utils::error::CompilerResult;
 use super::CodeGenerator;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -52,6 +51,9 @@ pub enum Instruction {
     SetLessEqual { destination: Operand },
     SetGreater { destination: Operand },
     SetGreaterEqual { destination: Operand },
+
+    /// Marks a label position in the instruction stream.
+    Label(String),
     
     ConvertToInt { destination: Operand, source: Operand },
     ConvertToFloat { destination: Operand, source: Operand },
@@ -188,8 +190,7 @@ impl IRGenerator {
             Literal::Integer(value) => Operand::Immediate(*value),
             Literal::Float(value) => Operand::ImmediateF64(*value),
             Literal::Boolean(value) => Operand::Immediate(if *value { 1 } else { 0 }),
-            Literal::String(value) => {
-            },
+            Literal::String(_value) => Operand::Immediate(0),
             Literal::Null => Operand::Immediate(0),
             Literal::Undefined => Operand::Immediate(0),
             _ => Operand::Immediate(0),
@@ -225,32 +226,32 @@ impl CodeGenerator for IRGenerator {
 
     fn generate_statement(&mut self, stmt: &Statement) -> CompilerResult<()> {
         match stmt {
-            Statement::Expression(expr) => {
+            Statement::Expression(expr, _) => {
                 self.generate_expression(expr)?;
             },
-            
-            Statement::Variable { mutable: _, name, type_annotation: _, value } => {
+
+            Statement::Variable { mutable: _, name, type_annotation: _, value, .. } => {
                 let temp_reg = self.allocate_register("temp");
                 self.generate_expression(value)?;
                 
                 self.store_symbol(name, temp_reg);
             },
-            
-            Statement::Constant { name, type_annotation: _, value } => {
+
+            Statement::Constant { name, type_annotation: _, value, .. } => {
                 let temp_reg = self.allocate_register("temp");
                 self.generate_expression(value)?;
                 
                 self.store_symbol(name, temp_reg);
             },
-            
-            Statement::Return(value) => {
+
+            Statement::Return(value, _) => {
                 if let Some(expr) = value {
                     self.generate_expression(expr)?;
                 }
                 self.emit(Instruction::Return { value: None });
             },
-            
-            Statement::If { condition, then_branch, elif_branches, else_branch } => {
+
+            Statement::If { condition, then_branch, elif_branches: _, else_branch, .. } => {
                 self.generate_expression(condition)?;
                 
                 let temp_reg = self.allocate_register("temp");
@@ -278,16 +279,18 @@ impl CodeGenerator for IRGenerator {
                 
                 self.emit(Instruction::Jump { target: end_label });
             },
-            
-            Statement::While { condition, body } => {
+
+            Statement::While { condition, body, .. } => {
                 let loop_start = self.generate_label("while_start");
                 let loop_end = self.generate_label("while_end");
                 
                 self.emit(Instruction::Comment("While loop start".to_string()));
                 
                 self.emit(Instruction::Jump { target: loop_start.clone() });
-                
-                self.emit(Instruction::Label(loop_start.clone()));
+
+                if let Operand::Label(name) = loop_start.clone() {
+                    self.emit(Instruction::Label(name));
+                }
                 
                 for stmt in body {
                     self.generate_statement(stmt)?;
@@ -302,11 +305,13 @@ impl CodeGenerator for IRGenerator {
                 });
                 
                 self.emit(Instruction::Jump { target: loop_end.clone() });
-                self.emit(Instruction::Label(loop_end));
+                if let Operand::Label(name) = loop_end {
+                    self.emit(Instruction::Label(name));
+                }
                 self.emit(Instruction::Comment("While loop end".to_string()));
             },
             
-            Statement::For { variable, iterable, body } => {
+            Statement::For { variable, iterable, body, .. } => {
                 
                 let temp_reg = self.allocate_register("temp");
                 self.generate_expression(iterable)?;
@@ -316,59 +321,34 @@ impl CodeGenerator for IRGenerator {
                     self.generate_statement(stmt)?;
                 }
             },
-            
-            Statement::Match { expr, arms } => {
+
+            Statement::Match { expr, arms, .. } => {
+                // Very simple lowering: evaluate the match expression, then each arm's guard/body.
                 self.generate_expression(expr)?;
-                
-                let temp_reg = self.allocate_register("temp");
-                let end_label = self.generate_label("endmatch");
-                
+
                 for arm in arms {
-                    self.generate_expression(&arm.pattern)?;
-                    let temp_reg2 = self.allocate_register("temp");
-                    
-                    self.emit(Instruction::JumpIf {
-                        condition: temp_reg2,
-                        target: self.generate_label("match_arm"),
-                    });
-                }
-                
-                self.emit(Instruction::Jump { target: end_label.clone() });
-                
-                for arm in arms {
-                    self.emit(Instruction::Label(self.generate_label("match_arm")));
-                    
                     if let Some(guard) = &arm.guard {
                         self.generate_expression(guard)?;
-                        let guard_reg = self.allocate_register("temp");
-                        
-                        self.emit(Instruction::JumpIfNot {
-                            condition: guard_reg,
-                            target: end_label.clone(),
-                        });
                     }
-                    
                     self.generate_expression(&arm.body)?;
-                    self.emit(Instruction::Jump { target: end_label.clone() });
                 }
-                
-                self.emit(Instruction::Label(end_label));
             },
-            
-            Statement::Block(statements) => {
+
+            Statement::Block(statements, _) => {
                 for stmt in statements {
                     self.generate_statement(stmt)?;
                 }
             },
-            
-            Statement::Function { name, parameters, return_type: _, body, async_flag: _ } => {
-                let func_label = self.generate_label("function");
-                let prologue_label = self.generate_label("prologue");
-                let epilogue_label = self.generate_label("epilogue");
+
+            Statement::Function { name, parameters, return_type: _, body, async_flag: _, .. } => {
+                let _func_label = self.generate_label("function");
+                let _prologue_label = self.generate_label("prologue");
+                let _epilogue_label = self.generate_label("epilogue");
                 
                 self.emit(Instruction::Function {
                     name: name.clone(),
                     parameters: parameters.iter().map(|p| p.name.clone()).collect(),
+                    body: Vec::new(),
                 });
                 
                 self.current_function = Some(name.clone());
@@ -384,8 +364,8 @@ impl CodeGenerator for IRGenerator {
                 
                 self.current_function = None;
             },
-            
-            Statement::Class { name, base, fields, methods } => {
+
+            Statement::Class { name, base: _base, fields, methods, .. } => {
                 let temp_reg = self.allocate_register("temp");
                 
                 self.emit(Instruction::Alloc {
@@ -400,7 +380,7 @@ impl CodeGenerator for IRGenerator {
                 }
             },
             
-            Statement::Import { module, alias, items } => {
+            Statement::Import { module, alias: _, items: _, .. } => {
                 self.emit(Instruction::Comment(format!("Import: {}", module)));
             },
         }
@@ -410,7 +390,7 @@ impl CodeGenerator for IRGenerator {
 
     fn generate_expression(&mut self, expr: &Expression) -> CompilerResult<()> {
         match expr {
-            Expression::Identifier(name) => {
+            Expression::Identifier(name, _) => {
                 if let Some(operand) = self.load_symbol(name) {
                     let temp_reg = self.allocate_register("temp");
                     self.emit(Instruction::Load {
@@ -420,7 +400,7 @@ impl CodeGenerator for IRGenerator {
                 }
             },
             
-            Expression::Literal(literal) => {
+            Expression::Literal(literal, _) => {
                 let temp_reg = self.allocate_register("temp");
                 let operand = self.generate_literal(literal);
                 self.emit(Instruction::Add {
@@ -430,7 +410,7 @@ impl CodeGenerator for IRGenerator {
                 });
             },
             
-            Expression::Binary { left, op, right } => {
+            Expression::Binary { left, op, right, .. } => {
                 let temp_reg = self.allocate_register("temp");
                 
                 self.generate_expression(left)?;
@@ -441,12 +421,12 @@ impl CodeGenerator for IRGenerator {
                 
                 match op {
                     BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide | BinaryOp::Modulo => {
-                        self.generate_arithmetic_op(*op, &temp_reg, &left_reg, &right_reg);
+                        self.generate_arithmetic_op(op.clone(), &temp_reg, &left_reg, &right_reg);
                     },
                     
                     BinaryOp::Equal | BinaryOp::NotEqual | BinaryOp::Less | BinaryOp::LessEqual | 
                     BinaryOp::Greater | BinaryOp::GreaterEqual => {
-                        self.generate_comparison_op(*op, &temp_reg, &left_reg, &right_reg);
+                        self.generate_comparison_op(op.clone(), &temp_reg, &left_reg, &right_reg);
                     },
                     
                     _ => {
@@ -455,16 +435,16 @@ impl CodeGenerator for IRGenerator {
                 }
             },
             
-            Expression::Unary { op, expr } => {
+            Expression::Unary { op, expr, .. } => {
                 let temp_reg = self.allocate_register("temp");
                 
                 self.generate_expression(expr)?;
                 let operand_reg = self.allocate_register("operand");
                 
-                self.generate_unary_op(*op, &temp_reg, &operand_reg);
+                self.generate_unary_op(op.clone(), &temp_reg, &operand_reg);
             },
             
-            Expression::Call { function, arguments } => {
+            Expression::Call { function, arguments, .. } => {
                 let mut arg_operands = Vec::new();
                 for arg in arguments {
                     self.generate_expression(arg)?;
@@ -481,7 +461,7 @@ impl CodeGenerator for IRGenerator {
                 });
             },
             
-            Expression::Index { expr, index } => {
+            Expression::Index { expr, index, .. } => {
                 self.generate_expression(expr)?;
                 let array_reg = self.allocate_register("array");
                 
@@ -492,14 +472,14 @@ impl CodeGenerator for IRGenerator {
                 self.emit(Instruction::Load {
                     destination: temp_reg,
                     address: Operand::Memory {
-                        base: Some(array_reg.to_string()),
+                        base: None,
                         offset: 0,
                         scale: 8,
                     },
                 });
             },
             
-            Expression::Member { expr, member } => {
+            Expression::Member { expr, member, .. } => {
                 self.generate_expression(expr)?;
                 let object_reg = self.allocate_register("object");
                 
@@ -507,13 +487,14 @@ impl CodeGenerator for IRGenerator {
                 self.emit(Instruction::Load {
                     destination: temp_reg,
                     address: Operand::Memory {
-                        base: Some(object_reg.to_string()),
+                        base: None,
+                        offset: 0,
                         scale: 8,
                     },
                 });
             },
             
-            Expression::Assignment { target, value, op } => {
+            Expression::Assignment { target, value, op, .. } => {
                 self.generate_expression(value)?;
                 let value_reg = self.allocate_register("value");
                 
@@ -521,7 +502,7 @@ impl CodeGenerator for IRGenerator {
                 let target_reg = self.allocate_register("target");
                 
                 if let Some(assignment_op) = op {
-                    self.generate_arithmetic_op(*assignment_op, &target_reg, &target_reg, &value_reg);
+                    self.generate_arithmetic_op(assignment_op.clone(), &target_reg, &target_reg, &value_reg);
                 } else {
                     self.emit(Instruction::Add {
                         destination: target_reg.clone(),
@@ -531,7 +512,7 @@ impl CodeGenerator for IRGenerator {
                 }
             },
             
-            Expression::Lambda { parameters, return_type: _, body } => {
+            Expression::Lambda { parameters, return_type: _, body, .. } => {
                 let lambda_name = format!("lambda_{}", self.label_counter);
                 self.label_counter += 1;
                 
@@ -541,7 +522,8 @@ impl CodeGenerator for IRGenerator {
                     body: Vec::new(),
                 });
                 
-                self.generate_statement(&Statement::Block(body.clone()))?;
+                // Generate IR for the lambda body.
+                self.generate_statement(&*body)?;
                 
                 let temp_reg = self.allocate_register("temp");
                 self.emit(Instruction::Add {
@@ -551,7 +533,7 @@ impl CodeGenerator for IRGenerator {
                 });
             },
             
-            Expression::If { condition, then_branch, else_branch } => {
+            Expression::If { condition, then_branch, else_branch, .. } => {
                 let temp_reg = self.allocate_register("temp");
                 
                 self.generate_expression(condition)?;
@@ -577,27 +559,13 @@ impl CodeGenerator for IRGenerator {
                 self.emit(Instruction::Jump { target: end_label });
             },
             
-            Expression::Match { expr, arms } => {
+            Expression::Match { expr, arms, .. } => {
                 self.generate_expression(expr)?;
                 
                 let temp_reg = self.allocate_register("temp");
                 let end_label = self.generate_label("endmatch");
                 
                 for arm in arms {
-                    self.generate_expression(&arm.pattern)?;
-                    let temp_reg2 = self.allocate_register("temp");
-                    
-                    self.emit(Instruction::JumpIf {
-                        condition: temp_reg2,
-                        target: self.generate_label("match_arm"),
-                    });
-                }
-                
-                self.emit(Instruction::Jump { target: end_label.clone() });
-                
-                for arm in arms {
-                    self.emit(Instruction::Label(self.generate_label("match_arm")));
-                    
                     if let Some(guard) = &arm.guard {
                         self.generate_expression(guard)?;
                         let guard_reg = self.allocate_register("temp");
@@ -611,8 +579,10 @@ impl CodeGenerator for IRGenerator {
                     self.generate_expression(&arm.body)?;
                     self.emit(Instruction::Jump { target: end_label.clone() });
                 }
-                
-                self.emit(Instruction::Label(end_label));
+
+                if let Operand::Label(name) = end_label {
+                    self.emit(Instruction::Label(name));
+                }
             },
         }
         

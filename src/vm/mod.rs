@@ -4,11 +4,11 @@ pub mod runtime;
 
 pub use self::bytecode::{VirtualMachine, VMState, VMError, VMResult};
 pub use self::garbage_collector::{GarbageCollector, GCStrategy};
+#[allow(unused_imports)]
 pub use self::runtime::{Runtime, RuntimeEnvironment, ExecutionContext};
 
 use crate::parser::ast::Program;
-use crate::utils::error::{CompilerResult, CompilerError};
-use crate::utils::position::Span;
+use crate::utils::error::CompilerResult;
 
 pub struct VirtualMachineEnvironment {
     vm: VirtualMachine,

@@ -96,7 +96,7 @@ impl TypeChecker {
                 self.use_def_analysis.define_constant(name.clone(), stmt.span());
             },
 
-            Statement::Function { name, parameters, return_type, body, .. } => {
+            Statement::Function { name, parameters, return_type, body: _, .. } => {
                 let param_types: Vec<Type> = parameters
                     .iter()
                     .map(|p| {
@@ -112,7 +112,7 @@ impl TypeChecker {
                     .map(|rt| rt.clone().into())
                     .unwrap_or_else(|| Type::Void);
 
-                let func_type = Type::Function(param_types.clone(), Box::new(return_type_clone.clone()));
+                let _func_type = Type::Function(param_types.clone(), Box::new(return_type_clone.clone()));
 
                 let current_scope = Rc::make_mut(&mut self.current_scope);
                 current_scope.define_function(
@@ -149,7 +149,7 @@ impl TypeChecker {
                 self.use_def_analysis.define_variable(name.clone(), stmt.span());
 
                 if let Some(base_name) = base {
-                    if let Some(base_def) = self.use_def_analysis.lookup_definition(base_name) {
+                    if let Some(_base_def) = self.use_def_analysis.lookup_definition(base_name) {
                         self.use_def_analysis.add_dependency(name, base_name);
                     }
                 }
@@ -377,7 +377,7 @@ impl TypeChecker {
             },
 
             Statement::Match { expr, arms, span } => {
-                let expr_type = self.infer_expression_type(expr)?;
+                let _expr_type = self.infer_expression_type(expr)?;
 
                 let match_scope = self.current_scope.enter_scope(ScopeKind::Match, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, match_scope);
@@ -417,11 +417,11 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Statement::Expression(expr, span) => {
+            Statement::Expression(expr, _span) => {
                 self.check_expression(expr)
             },
 
-            Statement::Return(value, span) => {
+            Statement::Return(value, _span) => {
                 if let Some(expr) = value {
                     self.check_expression(expr)?;
                 }
@@ -441,9 +441,9 @@ impl TypeChecker {
 
                 let class_type = Type::Object(field_types);
                 self.type_env.define_type(name.clone(), class_type)?;
-
+                
                 if let Some(base_name) = base {
-                    if let Some(base_type) = self.type_env.lookup_type(base_name) {
+                    if let Some(_base_type) = self.type_env.lookup_type(base_name) {
                         self.use_def_analysis.add_dependency(name, base_name);
                     } else {
                         self.errors.push(TypeCheckError::new(
@@ -605,7 +605,7 @@ impl TypeChecker {
                 self.check_expression(function)?;
 
                 let func_type = self.infer_expression_type(function)?;
-                if let Type::Function(params, return_type) = func_type {
+                if let Type::Function(params, _return_type) = func_type {
                     if params.len() != arguments.len() {
                         self.errors.push(TypeCheckError::new(
                             format!("Expected {} arguments, got {}", params.len(), arguments.len()),

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use crate::utils::position::Span;
-use crate::parser::ast::{Statement, Expression};
+use crate::parser::ast::Statement;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DefinitionKind {
@@ -195,10 +195,10 @@ impl UseDefAnalysis {
             Statement::Function { name, parameters, return_type: _, body, async_flag: _, span } => {
                 let def = self.define_function(name.clone(), *span);
                 
-                let function_scope = self.enter_scope();
+                let _function_scope = self.enter_scope();
                 
                 for param in parameters {
-                    let param_def = self.define_parameter(param.name.clone(), Span::default());
+                    let _param_def = self.define_parameter(param.name.clone(), Span::default());
                     
                     if let Some(default_value) = &param.default_value {
                         self.analyze_expression(default_value);
@@ -211,8 +211,9 @@ impl UseDefAnalysis {
                 }
                 
                 self.exit_scope();
-                
-                self.collect_statement_dependencies(body.iter().collect::<Vec<_>>(), &def.name);
+
+                // Analyze dependencies inside the function body statements
+                self.collect_statement_dependencies(body, &def.name);
             },
             
             Statement::If { condition, then_branch, elif_branches, else_branch, span: _ } => {
@@ -259,7 +260,7 @@ impl UseDefAnalysis {
                 
                 let def = self.define_variable(variable.clone(), *span);
                 
-                let loop_scope = self.enter_scope();
+                let _loop_scope = self.enter_scope();
                 
                 self.mark_usage(variable, *span);
                 
@@ -272,7 +273,7 @@ impl UseDefAnalysis {
                 self.add_dependency(variable, &def.name);
             },
             
-            Statement::Match { expr, arms, span } => {
+            Statement::Match { expr, arms, span: _ } => {
                 self.analyze_expression(expr);
                 
                 let match_scope = self.enter_scope();
@@ -289,26 +290,26 @@ impl UseDefAnalysis {
                 self.exit_scope();
             },
             
-            Statement::Block(statements, span) => {
-                let block_scope = self.enter_scope();
+            Statement::Block(statements, _span) => {
+                let _block_scope = self.enter_scope();
                 for stmt in statements {
                     self.analyze_statement(stmt);
                 }
                 self.exit_scope();
             },
             
-            Statement::Expression(expr, span) => {
+            Statement::Expression(expr, _span) => {
                 self.analyze_expression(expr);
             },
             
-            Statement::Return(value, span) => {
+            Statement::Return(value, _span) => {
                 if let Some(expr) = value {
                     self.analyze_expression(expr);
                 }
             },
             
             Statement::Class { name, base, fields, methods, span } => {
-                let def = self.define_variable(name.clone(), *span);
+                let _def = self.define_variable(name.clone(), *span);
                 
                 if let Some(base_name) = base {
                     self.mark_usage(base_name, *span);
@@ -316,7 +317,7 @@ impl UseDefAnalysis {
                 }
                 
                 for field in fields {
-                    let field_def = self.define_variable(field.name.clone(), *span);
+                    let _field_def = self.define_variable(field.name.clone(), *span);
                     
                     self.add_dependency(name, &field.name);
                 }
@@ -489,7 +490,8 @@ impl UseDefAnalysis {
                 for param in parameters {
                     self.add_dependency(dependent_name, &param.name);
                 }
-                self.collect_statement_dependencies(&vec![body.clone()], dependent_name);
+                // Collect dependencies from the lambda body
+                self.collect_statement_dependencies(std::slice::from_ref(&**body), dependent_name);
             },
             
             crate::parser::ast::Expression::If { condition, then_branch, else_branch, .. } => {

@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     println!("1. Lexing...");
     let lexer = Lexer::new(&source);
-    let tokens = lexer.tokenize()?;
+    let _tokens = lexer.tokenize()?;
     
     println!("2. Parsing...");
     let mut parser = Parser::new(&source)?;

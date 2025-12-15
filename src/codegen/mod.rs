@@ -2,13 +2,15 @@ pub mod ir;
 pub mod machine_code;
 pub mod bytecode;
 
+#[allow(unused_imports)]
 pub use self::ir::{IRGenerator, Instruction, Operand};
+#[allow(unused_imports)]
 pub use self::machine_code::{MachineCodeGenerator, TargetArchitecture};
+#[allow(unused_imports)]
 pub use self::bytecode::{BytecodeGenerator, Bytecode, OpCode};
 
 use crate::parser::ast::{Program, Statement, Expression};
-use crate::utils::error::{CompilerResult, CompilerError};
-use crate::utils::position::Span;
+use crate::utils::error::CompilerResult;
 
 pub trait CodeGenerator {
     fn generate_program(&mut self, program: &Program) -> CompilerResult<()>;

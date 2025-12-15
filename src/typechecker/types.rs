@@ -150,7 +150,7 @@ impl TypeEnvironment {
                 }
             },
             
-            super::super::parser::ast::Expression::Assignment { target, value, .. } => {
+            super::super::parser::ast::Expression::Assignment { target: _target, value, .. } => {
                 let value_type = self.infer_expression_type(value)?;
                 Ok(value_type)
             },
@@ -194,7 +194,7 @@ impl TypeEnvironment {
             },
             
             super::super::parser::ast::Expression::Match { expr, arms, .. } => {
-                let expr_type = self.infer_expression_type(expr)?;
+                let _expr_type = self.infer_expression_type(expr)?;
                 let mut arm_types = Vec::new();
                 
                 for arm in arms {

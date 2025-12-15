@@ -7,8 +7,7 @@ pub use self::constant_folding::ConstantFoldingOptimizer;
 pub use self::loop_optimization::LoopOptimizer;
 
 use crate::parser::ast::{Program, Statement, Expression};
-use crate::utils::error::{CompilerResult, CompilerError};
-use crate::utils::position::Span;
+use crate::utils::error::CompilerResult;
 
 pub trait Optimizer {
     fn optimize_program(&mut self, program: &mut Program) -> CompilerResult<()>;
