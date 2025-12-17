@@ -339,7 +339,7 @@ impl From<AstType> for Type {
                 Type::Union(vec![ok_type, err_type])
             },
             AstType::Custom(name) => Type::Custom(name),
-            AstType::Enum { name, generics } => Type::Custom(name), // For now, just use Custom type
+            AstType::Enum { name, generics: _ } => Type::Custom(name), // For now, just use Custom type
         }
     }
 }

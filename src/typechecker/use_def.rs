@@ -360,7 +360,7 @@ impl UseDefAnalysis {
                 }
             },
 
-            Statement::Enum { name, generics, variants, span } => {
+Statement::Enum { name, generics: _, variants, span } => {
                 // For enums, we just mark the enum name as used
                 self.mark_usage(name, *span);
                 
@@ -470,7 +470,7 @@ impl UseDefAnalysis {
                 self.analyze_expression(expr);
             },
 
-            crate::parser::ast::Expression::VariantCall { enum_name, variant_name, arguments, .. } => {
+crate::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                 // For now, just analyze the arguments
                 for arg in arguments {
                     self.analyze_expression(arg);
@@ -554,7 +554,7 @@ impl UseDefAnalysis {
             crate::parser::ast::Expression::Literal(_, _) => {
             },
 
-            crate::parser::ast::Expression::VariantCall { enum_name, variant_name, arguments, .. } => {
+crate::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                 // For now, just collect dependencies from the arguments
                 for arg in arguments {
                     self.collect_expression_dependencies(arg, dependent_name);
@@ -678,17 +678,17 @@ impl UseDefAnalysis {
                     }
                 },
 
-                Statement::Enum { name, generics, variants, .. } => {
+Statement::Enum { name, generics: _, variants: _variants, .. } => {
                     // For enums, we just add the enum name as a dependency
                     self.add_dependency(dependent_name, name);
                     
                     // Analyze variants for any type dependencies
-                    for variant in variants {
-                        for field_type in &variant.fields {
-                            // For now, we don't analyze type dependencies deeply
-                            // This could be enhanced in the future
-                        }
-                    }
+                    // for variant in variants {
+                    //     for field_type in &variant.fields {
+                    //         // For now, we don't analyze type dependencies deeply
+                    //         // This could be enhanced in the future
+                    //     }
+                    // }
                 },
             }
         }

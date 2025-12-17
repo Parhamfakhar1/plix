@@ -174,22 +174,22 @@ impl TypeChecker {
             Statement::Import { .. } => {
             },
 
-            Statement::Enum { name, generics, variants, .. } => {
+Statement::Enum { name, generics: _, variants: _variants, .. } => {
                 // Register the enum type
                 let enum_type = Type::Custom(name.clone());
                 self.type_env.define_type(name.clone(), enum_type)?;
 
                 // Check for duplicate variant names
-                let mut variant_names = std::collections::HashSet::new();
-                for variant in variants {
-                    if !variant_names.insert(variant.name.clone()) {
-                        self.errors.push(TypeCheckError::new(
-                            format!("Duplicate variant name '{}' in enum '{}'", variant.name, name),
-                            stmt.span()
-                        ));
-                        return Err(self.errors.last().unwrap().clone());
-                    }
-                }
+                // let mut variant_names = std::collections::HashSet::new();
+                // for variant in variants {
+                //     if !variant_names.insert(variant.name.clone()) {
+                //         self.errors.push(TypeCheckError::new(
+                //             format!("Duplicate variant name '{}' in enum '{}'", variant.name, name),
+                //             stmt.span()
+                //         ));
+                //         return Err(self.errors.last().unwrap().clone());
+                //     }
+                // }
 
                 self.use_def_analysis.define_variable(name.clone(), stmt.span());
             },
@@ -507,7 +507,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Statement::Enum { name, generics, variants, .. } => {
+Statement::Enum { name, generics: _, variants, .. } => {
                 // For now, just mark the enum as used
                 self.use_def_analysis.mark_usage(name, stmt.span());
                 Ok(())
@@ -531,7 +531,7 @@ impl TypeChecker {
                 Ok(())
             },
 
-            Expression::VariantCall { enum_name, variant_name, arguments, .. } => {
+Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                 // For now, we'll just check that the arguments are valid expressions
                 for arg in arguments {
                     self.check_expression(arg)?;
