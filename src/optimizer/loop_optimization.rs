@@ -55,6 +55,12 @@ impl LoopOptimizer {
                     self.is_loop_invariant(&arm.body, loop_depth)
                 })
             },
+            Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
+                arguments.iter().all(|arg| self.is_loop_invariant(arg, loop_depth))
+            },
+            Expression::Try { expr, .. } => {
+                self.is_loop_invariant(expr, loop_depth)
+            },
             Expression::Literal(_, _) => true,
         }
     }
@@ -140,6 +146,9 @@ impl LoopOptimizer {
                     true
                 },
                 Statement::Import { .. } => {
+                    true
+                },
+                Statement::Enum { .. } => {
                     true
                 },
             }

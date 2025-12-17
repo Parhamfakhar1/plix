@@ -80,6 +80,16 @@ impl TreeShakingOptimizer {
                     self.collect_used_symbols(&arm.body);
                 }
             },
+            Expression::VariantCall { enum_name, variant_name, arguments, .. } => {
+                self.mark_symbol_used(enum_name);
+                self.mark_symbol_used(variant_name);
+                for arg in arguments {
+                    self.collect_used_symbols(arg);
+                }
+            },
+            Expression::Try { expr, .. } => {
+                self.collect_used_symbols(expr);
+            },
             Expression::Literal(_, _) => {},
         }
     }
@@ -184,6 +194,12 @@ impl TreeShakingOptimizer {
                     }
                 }
             },
+            Statement::Enum { name, generics: _, variants, .. } => {
+                self.mark_symbol_used(name);
+                for variant in variants {
+                    self.mark_symbol_used(&variant.name);
+                }
+            },
         }
     }
 
@@ -269,6 +285,7 @@ impl TreeShakingOptimizer {
                 Statement::Return(_, _) 
                 | Statement::Match { .. } 
                 | Statement::Import { .. } => true,
+                Statement::Enum { .. } => true,
             }
         });
     }

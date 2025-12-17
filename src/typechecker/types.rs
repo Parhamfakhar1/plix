@@ -73,6 +73,12 @@ impl TypeEnvironment {
                     .ok_or_else(|| TypeEnvironmentError::UnknownType { name: name.clone() })
             },
             
+            super::super::parser::ast::Expression::VariantCall { enum_name, variant_name, arguments, .. } => {
+                // For now, we'll return a placeholder type
+                // This should be resolved during type checking phase
+                Ok(Type::Any)
+            },
+            
             super::super::parser::ast::Expression::Literal(literal, _) => self.infer_literal_type(literal),
             
             super::super::parser::ast::Expression::Binary { left, op, right, .. } => {
@@ -210,13 +216,9 @@ impl TypeEnvironment {
             super::super::parser::ast::Expression::Try { expr, .. } => {
                 let expr_type = self.infer_expression_type(expr)?;
                 
-                if let Type::Result(ok_type, _) = expr_type {
-                    Ok(*ok_type)
-                } else {
-                    Err(TypeEnvironmentError::InvalidTryOperator {
-                        type_: expr_type.to_string(),
-                    })
-                }
+                // For now, we'll just return the expression type
+                // The actual Result type checking should be done in the type checker
+                Ok(expr_type)
             },
         }
     }

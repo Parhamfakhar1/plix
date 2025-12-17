@@ -218,6 +218,16 @@ impl ConstantFoldingOptimizer {
                 }
             },
 
+            Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
+                for arg in arguments {
+                    self.fold_constants_in_expression(arg)?;
+                }
+            },
+
+            Expression::Try { expr, .. } => {
+                self.fold_constants_in_expression(expr)?;
+            },
+
             Expression::Identifier(_, _) | Expression::Literal(_, _) => {
             },
         }
@@ -306,6 +316,9 @@ impl ConstantFoldingOptimizer {
             },
 
             Statement::Import { .. } => {
+            },
+
+            Statement::Enum { .. } => {
             },
         }
         

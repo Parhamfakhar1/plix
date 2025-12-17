@@ -1,0 +1,16 @@
+// Simple enum test
+enum Color {
+    Red,
+    Green,
+    Blue
+}
+
+fn main() {
+    let red = Color.Red;
+    let green = Color.Green;
+    let blue = Color.Blue;
+    
+    print(red);
+    print(green);
+    print(blue);
+}

@@ -57,9 +57,9 @@ impl fmt::Display for Type {
                     write!(f, "{}", name)
                 } else {
                     write!(f, "{}<", name)?;
-                    for (i, gen) in generics.iter().enumerate() {
+                    for (i, generic) in generics.iter().enumerate() {
                         if i > 0 { write!(f, ", ")?; }
-                        write!(f, "{}", gen)?;
+                        write!(f, "{}", generic)?;
                     }
                     write!(f, ">")
                 }
@@ -469,6 +469,7 @@ impl Statement {
             Statement::Block(_, span) => *span,
             Statement::Function { span, .. } => *span,
             Statement::Class { span, .. } => *span,
+            Statement::Enum { span, .. } => *span,
             Statement::Import { span, .. } => *span,
         }
     }

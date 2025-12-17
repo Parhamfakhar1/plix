@@ -385,6 +385,16 @@ impl CodeGenerator for IRGenerator {
             Statement::Import { module, alias: _, items: _, .. } => {
                 self.emit(Instruction::Comment(format!("Import: {}", module)));
             },
+
+            Statement::Enum { name, generics: _, variants, .. } => {
+                // For enums, we just emit a comment for now
+                self.emit(Instruction::Comment(format!("Enum: {}", name)));
+                
+                // Generate IR for each variant
+                for variant in variants {
+                    self.emit(Instruction::Comment(format!("Variant: {}", variant.name)));
+                }
+            },
         }
         
         Ok(())
@@ -585,6 +595,21 @@ impl CodeGenerator for IRGenerator {
                 if let Operand::Label(name) = end_label {
                     self.emit(Instruction::Label(name));
                 }
+            },
+
+            Expression::VariantCall { enum_name, variant_name, arguments, .. } => {
+                // For variant calls, we just emit a comment for now
+                self.emit(Instruction::Comment(format!("Variant call: {}.{}", enum_name, variant_name)));
+                
+                // Generate IR for each argument
+                for arg in arguments {
+                    self.generate_expression(arg)?;
+                }
+            },
+
+            Expression::Try { expr, .. } => {
+                // For try expressions, we just generate the inner expression for now
+                self.generate_expression(expr)?;
             },
         }
         

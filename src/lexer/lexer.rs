@@ -453,6 +453,7 @@ impl<'a> Lexer<'a> {
             "const" => TokenKind::Const,
             "mut" => TokenKind::Mut,
             "class" => TokenKind::Class,
+            "enum" => TokenKind::Enum,
             "data" => TokenKind::Data,
             "if" => TokenKind::If,
             "elif" => TokenKind::Elif,

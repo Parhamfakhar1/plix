@@ -581,4 +581,61 @@ impl Parser {
             message: message.to_string(),
         }
     }
+
+    fn parse_enum(&mut self) -> CompilerResult<Statement> {
+        let name = self.expect_identifier("enum name")?;
+        
+        let mut generics = Vec::new();
+        if self.match_token(TokenKind::Less) {
+            loop {
+                let generic_name = self.expect_identifier("generic parameter")?;
+                generics.push(generic_name);
+                
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
+            self.expect(TokenKind::Greater, ">")?;
+        }
+        
+        self.expect(TokenKind::Colon, ":")?;
+        
+        let mut variants = Vec::new();
+        self.expect(TokenKind::Indent, "indent")?;
+        
+        while !self.check(TokenKind::Dedent) && !self.is_at_end() {
+            let variant_name = self.expect_identifier("variant name")?;
+            
+            let mut fields = Vec::new();
+            if self.match_token(TokenKind::LParen) {
+                if !self.check(TokenKind::RParen) {
+                    loop {
+                        let field_type = self.parse_type()?;
+                        fields.push(field_type);
+                        
+                        if !self.match_token(TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                }
+                self.expect(TokenKind::RParen, ")")?;
+            }
+            
+            variants.push(EnumVariant {
+                name: variant_name,
+                fields,
+            });
+            
+            while self.match_token(TokenKind::Newline) {}
+        }
+        
+        self.expect(TokenKind::Dedent, "dedent")?;
+        
+        Ok(Statement::Enum {
+            name,
+            generics,
+            variants,
+            span: Span::default(),
+        })
+    }
 }
