@@ -37,7 +37,10 @@ impl Parser {
     }
     
     fn parse_statement(&mut self) -> CompilerResult<Option<Statement>> {
-        if self.match_token(TokenKind::Def) {
+        if self.match_token(TokenKind::Enum) {
+            self.parse_enum()
+                .map(|stmt| Some(stmt))
+        } else if self.match_token(TokenKind::Def) {
             self.parse_function()
                 .map(|stmt| Some(stmt))
         } else if self.match_token(TokenKind::Const) {
@@ -319,7 +322,21 @@ impl Parser {
             return Ok(Expression::unary(op, expr));
         }
         
-        self.parse_primary()
+        self.parse_try()
+    }
+
+    fn parse_try(&mut self) -> CompilerResult<Expression> {
+        let expr = self.parse_primary()?;
+        
+        if self.match_token(TokenKind::Question) {
+            let span = expr.span();
+            Ok(Expression::Try {
+                expr: Box::new(expr),
+                span,
+            })
+        } else {
+            Ok(expr)
+        }
     }
     
     fn parse_primary(&mut self) -> CompilerResult<Expression> {
@@ -351,7 +368,27 @@ impl Parser {
             return Ok(Expression::Literal(Literal::Undefined, span));
         } else if self.match_token(TokenKind::Identifier("".to_string())) {
             if let TokenKind::Identifier(name) = self.previous().kind.clone() {
-                return Ok(Expression::identifier(name));
+                // Check if this is a variant call
+                if self.match_token(TokenKind::LParen) {
+                    let mut arguments = Vec::new();
+                    if !self.check(TokenKind::RParen) {
+                        loop {
+                            arguments.push(self.parse_expression()?);
+                            if !self.match_token(TokenKind::Comma) {
+                                break;
+                            }
+                        }
+                    }
+                    self.expect(TokenKind::RParen, ")")?;
+                    return Ok(Expression::VariantCall {
+                        enum_name: "".to_string(), // We'll need to resolve this later
+                        variant_name: name,
+                        arguments,
+                        span: Span::default(),
+                    });
+                } else {
+                    return Ok(Expression::identifier(name));
+                }
             }
         } else if self.match_token(TokenKind::LParen) {
             let expr = self.parse_expression()?;
@@ -371,6 +408,23 @@ impl Parser {
             Ok(Type::Boolean)
         } else if self.match_token(TokenKind::Identifier("void".to_string())) {
             Ok(Type::Void)
+        } else if self.match_token(TokenKind::Identifier("Result".to_string())) {
+            self.expect(TokenKind::Less, "<")?;
+            let ok_type = self.parse_type()?;
+            self.expect(TokenKind::Comma, ",")?;
+            let err_type = self.parse_type()?;
+            self.expect(TokenKind::Greater, ">")?;
+            Ok(Type::Result(Box::new(ok_type), Box::new(err_type)))
+        } else if self.match_token(TokenKind::Identifier("Array".to_string())) {
+            self.expect(TokenKind::Less, "<")?;
+            let inner_type = self.parse_type()?;
+            self.expect(TokenKind::Greater, ">")?;
+            Ok(Type::Array(Box::new(inner_type)))
+        } else if self.match_token(TokenKind::Identifier("Optional".to_string())) {
+            self.expect(TokenKind::Less, "<")?;
+            let inner_type = self.parse_type()?;
+            self.expect(TokenKind::Greater, ">")?;
+            Ok(Type::Optional(Box::new(inner_type)))
         } else {
             let name = self.expect_identifier("type name")?;
             Ok(Type::Custom(name))

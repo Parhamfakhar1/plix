@@ -792,6 +792,11 @@ impl TypeChecker {
 
                 Ok(())
             },
+
+            Expression::Try { expr, .. } => {
+                self.check_expression(expr)?;
+                Ok(())
+            },
         }
     }
 

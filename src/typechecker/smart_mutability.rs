@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use crate::utils::position::Span;
-use crate::parser::ast::{Expression, Statement, Parameter, Program};
+use crate::parser::ast::{Expression, Statement, Program};
 use super::scope::Type;
 use super::types::TypeEnvironment;
 use super::use_def::UseDefAnalysis;
@@ -248,7 +248,7 @@ impl SmartMutabilityChecker {
             },
             
             Statement::Block(statements, span) => {
-                let block_region = self.region_graph.enter_region(*span);
+                let _block_region = self.region_graph.enter_region(*span);
                 
                 for stmt in statements {
                     self.collect_declarations_in_statement(stmt)?;
@@ -333,7 +333,7 @@ impl SmartMutabilityChecker {
             },
             
             Statement::Function { body, span, .. } => {
-                let function_region = self.region_graph.enter_region(*span);
+                let _function_region = self.region_graph.enter_region(*span);
                 
                 for stmt in body {
                     self.analyze_statement(stmt)?;
@@ -343,7 +343,7 @@ impl SmartMutabilityChecker {
             },
             
             Statement::Block(statements, span) => {
-                let block_region = self.region_graph.enter_region(*span);
+                let _block_region = self.region_graph.enter_region(*span);
                 
                 for stmt in statements {
                     self.analyze_statement(stmt)?;

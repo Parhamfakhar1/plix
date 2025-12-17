@@ -206,6 +206,18 @@ impl TypeEnvironment {
                 
                 Ok(Type::Union(arm_types))
             },
+            
+            super::super::parser::ast::Expression::Try { expr, .. } => {
+                let expr_type = self.infer_expression_type(expr)?;
+                
+                if let Type::Result(ok_type, _) = expr_type {
+                    Ok(*ok_type)
+                } else {
+                    Err(TypeEnvironmentError::InvalidTryOperator {
+                        type_: expr_type.to_string(),
+                    })
+                }
+            },
         }
     }
 
@@ -425,4 +437,7 @@ pub enum TypeEnvironmentError {
     
     #[error("Invalid comparison operands: {left} and {right}")]
     InvalidComparisonOperands { left: String, right: String },
+    
+    #[error("Cannot use '?' outside a function that returns Result<..., string>")]
+    InvalidTryOperator { type_: String },
 }

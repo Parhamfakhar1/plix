@@ -17,6 +17,10 @@ pub enum Type {
     Optional(Box<Type>),
     Result(Box<Type>, Box<Type>),
     Custom(String),
+    Enum {
+        name: String,
+        generics: Vec<String>,
+    },
 }
 
 impl fmt::Display for Type {
@@ -48,6 +52,18 @@ impl fmt::Display for Type {
             Type::Optional(inner) => write!(f, "{}?", inner),
             Type::Result(ok, err) => write!(f, "Result<{}, {}>", ok, err),
             Type::Custom(name) => write!(f, "{}", name),
+            Type::Enum { name, generics } => {
+                if generics.is_empty() {
+                    write!(f, "{}", name)
+                } else {
+                    write!(f, "{}<", name)?;
+                    for (i, gen) in generics.iter().enumerate() {
+                        if i > 0 { write!(f, ", ")?; }
+                        write!(f, "{}", gen)?;
+                    }
+                    write!(f, ">")
+                }
+            }
         }
     }
 }
@@ -154,6 +170,12 @@ pub enum Expression {
         arguments: Vec<Expression>,
         span: Span,
     },
+    VariantCall {
+        enum_name: String,
+        variant_name: String,
+        arguments: Vec<Expression>,
+        span: Span,
+    },
     Index {
         expr: Box<Expression>,
         index: Box<Expression>,
@@ -187,6 +209,10 @@ pub enum Expression {
         arms: Vec<MatchArm>,
         span: Span,
     },
+    Try {
+        expr: Box<Expression>,
+        span: Span,
+    },
 }
 
 impl Expression {
@@ -197,12 +223,14 @@ impl Expression {
             Expression::Binary { span, .. } => *span,
             Expression::Unary { span, .. } => *span,
             Expression::Call { span, .. } => *span,
+            Expression::VariantCall { span, .. } => *span,
             Expression::Index { span, .. } => *span,
             Expression::Member { span, .. } => *span,
             Expression::Assignment { span, .. } => *span,
             Expression::Lambda { span, .. } => *span,
             Expression::If { span, .. } => *span,
             Expression::Match { span, .. } => *span,
+            Expression::Try { span, .. } => *span,
         }
     }
 }
@@ -294,6 +322,12 @@ pub enum Statement {
         methods: Vec<Statement>,
         span: Span,
     },
+    Enum {
+        name: String,
+        generics: Vec<String>,
+        variants: Vec<EnumVariant>,
+        span: Span,
+    },
     Import {
         module: String,
         alias: Option<String>,
@@ -319,6 +353,12 @@ pub enum Visibility {
 pub struct ImportItem {
     pub name: String,
     pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnumVariant {
+    pub name: String,
+    pub fields: Vec<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

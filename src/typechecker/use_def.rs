@@ -449,6 +449,10 @@ impl UseDefAnalysis {
                     self.analyze_expression(&arm.body);
                 }
             },
+
+            crate::parser::ast::Expression::Try { expr, .. } => {
+                self.analyze_expression(expr);
+            },
         }
     }
 
@@ -518,6 +522,10 @@ impl UseDefAnalysis {
                     }
                     self.collect_expression_dependencies(&arm.body, dependent_name);
                 }
+            },
+
+            crate::parser::ast::Expression::Try { expr, .. } => {
+                self.collect_expression_dependencies(expr, dependent_name);
             },
             
             crate::parser::ast::Expression::Literal(_, _) => {
