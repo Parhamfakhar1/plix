@@ -369,7 +369,7 @@ Statement::Enum { name, generics: _, variants, span } => {
                 
                 // Analyze variants for any type dependencies
                 for variant in variants {
-                    for field_type in &variant.fields {
+                    for _field_type in &variant.fields {
                         // For now, we don't analyze type dependencies deeply
                         // This could be enhanced in the future
                     }

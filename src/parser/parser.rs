@@ -27,9 +27,16 @@ impl Parser {
             if let Some(stmt) = self.parse_statement()? {
                 statements.push(stmt);
             }
+            
+            // Skip any newlines between statements
+            while self.match_token(TokenKind::Newline) {}
         }
         
-        let end_pos = self.previous().span.end;
+        let end_pos = if statements.is_empty() {
+            start_pos
+        } else {
+            self.previous().span.end
+        };
         Ok(Program {
             statements,
             span: Span::new(start_pos, end_pos),
@@ -598,38 +605,74 @@ impl Parser {
             self.expect(TokenKind::Greater, ">")?;
         }
         
-        self.expect(TokenKind::Colon, ":")?;
-        
+        // Support both Python-style (colon + indent) and C-style (braces)
         let mut variants = Vec::new();
-        self.expect(TokenKind::Indent, "indent")?;
         
-        while !self.check(TokenKind::Dedent) && !self.is_at_end() {
-            let variant_name = self.expect_identifier("variant name")?;
+        if self.match_token(TokenKind::Colon) {
+            // Python-style: enum Name: { variants }
+            self.expect(TokenKind::Indent, "indent")?;
             
-            let mut fields = Vec::new();
-            if self.match_token(TokenKind::LParen) {
-                if !self.check(TokenKind::RParen) {
-                    loop {
-                        let field_type = self.parse_type()?;
-                        fields.push(field_type);
-                        
-                        if !self.match_token(TokenKind::Comma) {
-                            break;
+            while !self.check(TokenKind::Dedent) && !self.is_at_end() {
+                let variant_name = self.expect_identifier("variant name")?;
+                
+                let mut fields = Vec::new();
+                if self.match_token(TokenKind::LParen) {
+                    if !self.check(TokenKind::RParen) {
+                        loop {
+                            let field_type = self.parse_type()?;
+                            fields.push(field_type);
+                            
+                            if !self.match_token(TokenKind::Comma) {
+                                break;
+                            }
                         }
                     }
+                    self.expect(TokenKind::RParen, ")")?;
                 }
-                self.expect(TokenKind::RParen, ")")?;
+                
+                variants.push(EnumVariant {
+                    name: variant_name,
+                    fields,
+                });
+                
+                while self.match_token(TokenKind::Newline) {}
             }
             
-            variants.push(EnumVariant {
-                name: variant_name,
-                fields,
-            });
+            self.expect(TokenKind::Dedent, "dedent")?;
+        } else if self.match_token(TokenKind::LBrace) {
+            // C-style: enum Name { variants }
+            while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+                let variant_name = self.expect_identifier("variant name")?;
+                
+                let mut fields = Vec::new();
+                if self.match_token(TokenKind::LParen) {
+                    if !self.check(TokenKind::RParen) {
+                        loop {
+                            let field_type = self.parse_type()?;
+                            fields.push(field_type);
+                            
+                            if !self.match_token(TokenKind::Comma) {
+                                break;
+                            }
+                        }
+                    }
+                    self.expect(TokenKind::RParen, ")")?;
+                }
+                
+                variants.push(EnumVariant {
+                    name: variant_name,
+                    fields,
+                });
+                
+                if !self.match_token(TokenKind::Comma) {
+                    break;
+                }
+            }
             
-            while self.match_token(TokenKind::Newline) {}
+            self.expect(TokenKind::RBrace, "}")?;
+        } else {
+            return Err(self.error("Expected ':' or '{' after enum name"));
         }
-        
-        self.expect(TokenKind::Dedent, "dedent")?;
         
         Ok(Statement::Enum {
             name,

@@ -10,6 +10,8 @@ pub struct Lexer<'a> {
     pending_tokens: Vec<Token>,
     indent_stack: Vec<usize>,
     is_start_of_line: bool,
+    max_tokens: usize, // Prevent infinite loops
+    token_count: usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -20,6 +22,8 @@ impl<'a> Lexer<'a> {
             pending_tokens: Vec::new(),
             indent_stack: vec![0],
             is_start_of_line: true,
+            max_tokens: input.len() * 1000, // Prevent infinite loops
+            token_count: 0,
         }
     }
     
@@ -28,6 +32,13 @@ impl<'a> Lexer<'a> {
         
         while let Some(token) = self.next_token()? {
             tokens.push(token);
+            // Prevent infinite loops by checking token count
+            if tokens.len() > self.max_tokens {
+                return Err(LexerError::UnexpectedCharacter {
+                    character: '\0',
+                    position: self.current_pos,
+                }.into());
+            }
         }
         
         while self.indent_stack.len() > 1 {
@@ -40,6 +51,14 @@ impl<'a> Lexer<'a> {
     }
     
     fn next_token(&mut self) -> CompilerResult<Option<Token>> {
+        // Prevent infinite loops by limiting token count
+        if self.token_count > self.max_tokens {
+            return Err(LexerError::UnexpectedCharacter {
+                character: '\0',
+                position: self.current_pos,
+            }.into());
+        }
+        
         if let Some(token) = self.pending_tokens.pop() {
             return Ok(Some(token));
         }
@@ -72,7 +91,13 @@ impl<'a> Lexer<'a> {
             '+' => self.scan_plus(),
             '-' => self.scan_minus(),
             '*' => self.scan_star(),
-            '/' => self.scan_slash(),
+            '/' => {
+                if self.input.peek() == Some(&'/') {
+                    self.scan_comment()
+                } else {
+                    self.scan_slash()
+                }
+            }
             '%' => self.scan_percent(),
             '^' => self.scan_caret(),
             '!' => self.scan_bang(),
@@ -119,6 +144,7 @@ impl<'a> Lexer<'a> {
         }?;
         
         self.is_start_of_line = false;
+        self.token_count += 1;
         Ok(Some(token))
     }
     
@@ -141,12 +167,6 @@ impl<'a> Lexer<'a> {
         }
         
         if let Some(&ch) = self.input.peek() {
-            if ch == '#' {
-                self.scan_comment()?;
-                self.is_start_of_line = true;
-                return Ok(());
-            }
-            
             if ch == '\n' || ch == '\r' {
                 self.is_start_of_line = true;
                 return Ok(());
@@ -192,42 +212,59 @@ impl<'a> Lexer<'a> {
     fn scan_comment(&mut self) -> CompilerResult<Token> {
         let start_pos = self.current_pos;
         
+        // Skip the '#' character
+        self.next_char();
         
         if self.input.peek() == Some(&'*') {
             return self.scan_block_comment(start_pos);
         }
         
+        let mut lexeme = String::from("#");
+        
         while let Some(&ch) = self.input.peek() {
             if ch == '\n' || ch == '\r' {
                 break;
             }
+            lexeme.push(ch);
             self.next_char();
         }
         
-        self.next_token()
-            .transpose()
-            .unwrap_or(Ok(Token::eof(self.current_pos)))
+        // Return a comment token, not a newline
+        Ok(Token::new(TokenKind::Comment, Span::new(start_pos, self.current_pos), lexeme))
     }
     
     fn scan_block_comment(&mut self, start_pos: Position) -> CompilerResult<Token> {
         let mut depth = 1;
+        let mut lexeme = String::from("#*");
+        
+        // Skip the '*' character after '#'
+        self.next_char();
         
         while depth > 0 {
             match self.input.next() {
                 Some('*') => {
+                    lexeme.push('*');
+                    self.current_pos.advance('*');
                     if self.input.peek() == Some(&'#') {
                         depth -= 1;
-                        self.next_char(); // consume the '#'
+                        let hash = self.input.next().unwrap();
+                        lexeme.push(hash);
+                        self.current_pos.advance(hash);
                     }
                 }
                 Some('#') => {
+                    lexeme.push('#');
+                    self.current_pos.advance('#');
                     if self.input.peek() == Some(&'*') {
                         depth += 1;
-                        self.next_char(); // consume the '*'
+                        let star = self.input.next().unwrap();
+                        lexeme.push(star);
+                        self.current_pos.advance(star);
                     }
                 }
-                Some(_) => {
-                    // Continue scanning
+                Some(ch) => {
+                    lexeme.push(ch);
+                    self.current_pos.advance(ch);
                 }
                 None => {
                     return Err(LexerError::UnterminatedComment {
@@ -237,9 +274,8 @@ impl<'a> Lexer<'a> {
             }
         }
         
-        self.next_token()
-            .transpose()
-            .unwrap_or(Ok(Token::eof(self.current_pos)))
+        // Return a comment token, not a newline
+        Ok(Token::new(TokenKind::Comment, Span::new(start_pos, self.current_pos), lexeme))
     }
     
     fn scan_string(&mut self) -> CompilerResult<Token> {
@@ -818,15 +854,19 @@ impl<'a> Lexer<'a> {
         let start_pos = self.current_pos;
         let ch = self.input.next().unwrap();
         let lexeme = ch.to_string();
-        let token = self.create_token_with_pos(kind, lexeme, start_pos, self.current_pos);
         self.current_pos.advance(ch);
+        let token = self.create_token_with_pos(kind, lexeme, start_pos, self.current_pos);
         Ok(token)
     }
     
     fn next_char(&mut self) -> Option<char> {
-        let ch = self.input.next()?;
-        self.current_pos.advance(ch);
-        Some(ch)
+        match self.input.next() {
+            Some(ch) => {
+                self.current_pos.advance(ch);
+                Some(ch)
+            }
+            None => None,
+        }
     }
     
     fn skip_whitespace_except_newline(&mut self) {

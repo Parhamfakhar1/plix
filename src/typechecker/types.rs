@@ -73,7 +73,7 @@ impl TypeEnvironment {
                     .ok_or_else(|| TypeEnvironmentError::UnknownType { name: name.clone() })
             },
             
-super::super::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
+super::super::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments: _arguments, .. } => {
                 // For now, we'll return a placeholder type
                 // This should be resolved during type checking phase
                 Ok(Type::Any)

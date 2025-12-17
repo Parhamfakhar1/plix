@@ -7,8 +7,7 @@ mod vm;
 mod utils;
 
 use std::path::Path;
-use std::fs::File;
-use std::io::Read;
+use std::fs;
 use vm::VirtualMachineEnvironment;
 use optimizer::OptimizationPipeline;
 use codegen::CodeGenerationPipeline;
@@ -24,10 +23,58 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "examples/basic.px"
     };
     
-    let mut source = String::new();
+    let source: String;
+    
     if Path::new(input_path).exists() {
-        let mut file = File::open(input_path)?;
-        file.read_to_string(&mut source)?;
+        // Read file with proper encoding handling
+        let file_bytes = fs::read(input_path)?;
+        
+        // Try UTF-8 first, then fall back to UTF-16 and UTF-8 BOM handling
+        source = match String::from_utf8(file_bytes.clone()) {
+            Ok(s) => s,
+            Err(_) => {
+                // Handle UTF-16 BOM if present
+                if file_bytes.starts_with(b"\xFF\xFE") {
+                    // UTF-16 Little Endian
+                    if file_bytes.len() >= 2 {
+                        match String::from_utf16(
+                            file_bytes[2..]
+                                .chunks_exact(2)
+                                .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+                                .collect::<Vec<u16>>()
+                                .as_slice()
+                        ) {
+                            Ok(s) => s,
+                            Err(_) => String::from_utf8_lossy(&file_bytes).to_string(),
+                        }
+                    } else {
+                        String::from_utf8_lossy(&file_bytes).to_string()
+                    }
+                } else if file_bytes.starts_with(b"\xFE\xFF") {
+                    // UTF-16 Big Endian
+                    if file_bytes.len() >= 2 {
+                        match String::from_utf16(
+                            file_bytes[2..]
+                                .chunks_exact(2)
+                                .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
+                                .collect::<Vec<u16>>()
+                                .as_slice()
+                        ) {
+                            Ok(s) => s,
+                            Err(_) => String::from_utf8_lossy(&file_bytes).to_string(),
+                        }
+                    } else {
+                        String::from_utf8_lossy(&file_bytes).to_string()
+                    }
+                } else if file_bytes.starts_with(b"\xEF\xBB\xBF") {
+                    // UTF-8 BOM
+                    String::from_utf8_lossy(&file_bytes[3..]).to_string()
+                } else {
+                    // Try to recover as much valid UTF-8 as possible
+                    String::from_utf8_lossy(&file_bytes).to_string()
+                }
+            }
+        };
         
         println!("Compiling program from: {}", input_path);
         println!("=====================================");
@@ -54,7 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     println!("1. Lexing...");
     let lexer = Lexer::new(&source);
-    let _tokens = lexer.tokenize()?;
+    let _tokens = lexer.tokenize()?; // Tokens are currently unused but kept for future parser integration
     
     println!("2. Parsing...");
     let mut parser = Parser::new(&source)?;

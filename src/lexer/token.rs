@@ -77,6 +77,7 @@ pub enum TokenKind {
     Indent,
     Dedent,
     EOF,
+    Comment,
 }
 
 
@@ -155,6 +156,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Indent => write!(f, "indent"),
             TokenKind::Dedent => write!(f, "dedent"),
             TokenKind::EOF => write!(f, "EOF"),
+            TokenKind::Comment => write!(f, "comment"),
         }
     }
 }
