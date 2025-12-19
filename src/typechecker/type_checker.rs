@@ -2,8 +2,7 @@
 
 use std::rc::Rc;
 use crate::utils::position::Span;
-use crate::parser::ast::{Statement, Expression, Program};
-use super::scope::{Scope, ScopeKind, Type, ScopeError};
+use crate::parser::ast::{Statement, Expression, Program, Type as AstType, BinaryOp, UnaryOp};use super::scope::{Scope, ScopeKind, Type, ScopeError};
 use super::types::{TypeEnvironment, TypeEnvironmentError};
 use super::use_def::{UseDefAnalysis, DefinitionKind};
 use super::smart_mutability::SmartMutabilityChecker;
@@ -58,7 +57,6 @@ impl TypeChecker {
         }
 
         self.check_unused_definitions();
-
         self.check_circular_dependencies();
 
         // Check Smart Mutability™ rules
@@ -112,7 +110,7 @@ impl TypeChecker {
                     .map(|p| {
                         p.type_annotation
                             .clone()
-                            .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
+                            .unwrap_or_else(|| AstType::Undefined.into())
                             .into()
                     })
                     .collect();
@@ -148,7 +146,7 @@ impl TypeChecker {
                 for field in fields {
                     let field_type = field.type_annotation
                         .clone()
-                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
+                        .unwrap_or_else(|| AstType::Undefined.into())
                         .into();
                     field_types.insert(field.name.clone(), field_type);
                 }
@@ -174,14 +172,31 @@ impl TypeChecker {
             Statement::Import { .. } => {
             },
 
-Statement::Enum { name, generics: _, variants: _variants, .. } => {
-                // Register the enum type
-                let enum_type = Type::Custom(name.clone());
+            Statement::Enum { name, generics, variants, .. } => {
+                // Create the enum type with variants
+                let mut variant_types = std::collections::HashMap::new();
+                for variant in variants {
+                    let variant_type = if variant.fields.is_empty() {
+                        Type::Unit  // No data
+                    } else if variant.fields.len() == 1 {
+                        Type::from(variant.fields[0].clone())
+                    } else {
+                        Type::Tuple(variant.fields.iter().map(|f| Type::from(f.clone())).collect())
+                    };
+                    variant_types.insert(variant.name.clone(), variant_type);
+                }
+
+                let enum_type = Type::Enum {
+                    name: name.clone(),
+                    generics: generics.clone(),
+                    variants: variant_types,
+                };
+                
                 self.type_env.define_type(name.clone(), enum_type)?;
 
                 // Check for duplicate variant names
                 let mut variant_names = std::collections::HashSet::new();
-                for variant in _variants {
+                for variant in variants {
                     if !variant_names.insert(variant.name.clone()) {
                         self.errors.push(TypeCheckError::new(
                             format!("Duplicate variant name '{}' in enum '{}'", variant.name, name),
@@ -270,7 +285,7 @@ Statement::Enum { name, generics: _, variants: _variants, .. } => {
                     let param_type = param.type_annotation
                         .clone()
                         .map(|t| Type::from(t))
-                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into());
+                        .unwrap_or_else(|| AstType::Undefined.into());
 
                     let current_scope = Rc::make_mut(&mut self.current_scope);
                     current_scope.define_variable(param.name.clone(), param_type.clone(), false, *span)?;
@@ -412,9 +427,9 @@ Statement::Enum { name, generics: _, variants: _variants, .. } => {
                 let match_scope = self.current_scope.enter_scope(ScopeKind::Match, *span);
                 let previous_scope = std::mem::replace(&mut self.current_scope, match_scope);
 
+                // Check that all arms match the expression type
                 for arm in arms {
-                    // Patterns are not expressions, so we can't infer their type directly
-                    // For now, we'll skip pattern type checking
+                    // For now, just check guard and body
                     if let Some(guard) = &arm.guard {
                         let guard_type = self.infer_expression_type(guard)?;
                         if !guard_type.is_boolean() {
@@ -464,7 +479,7 @@ Statement::Enum { name, generics: _, variants: _variants, .. } => {
                 for field in fields {
                     let field_type = field.type_annotation
                         .clone()
-                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
+                        .unwrap_or_else(|| AstType::Undefined.into())
                         .into();
                     field_types.insert(field.name.clone(), field_type);
                 }
@@ -507,7 +522,7 @@ Statement::Enum { name, generics: _, variants: _variants, .. } => {
                 Ok(())
             },
 
-Statement::Enum { name, generics: _, variants: _variants, .. } => {
+            Statement::Enum { name, generics: _, variants: _variants, .. } => {
                 // For now, just mark the enum as used
                 self.use_def_analysis.mark_usage(name, stmt.span());
                 Ok(())
@@ -531,11 +546,81 @@ Statement::Enum { name, generics: _, variants: _variants, .. } => {
                 Ok(())
             },
 
-Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
-                // For now, we'll just check that the arguments are valid expressions
-                for arg in arguments {
-                    self.check_expression(arg)?;
+            Expression::VariantCall { enum_name, variant_name, arguments, span } => {
+                // Look up the enum type
+                if let Some(Type::Enum { variants, .. }) = self.type_env.lookup_type(enum_name) {
+                    if let Some(variant_type) = variants.get(variant_name) {
+                        // Check arguments against variant type
+                        match variant_type {
+                            Type::Unit => {
+                                if !arguments.is_empty() {
+                                    self.errors.push(TypeCheckError::new(
+                                        format!("Variant '{}' takes no arguments", variant_name),
+                                        *span
+                                    ));
+                                    return Err(self.errors.last().unwrap().clone());
+                                }
+                            },
+                            Type::Tuple(field_types) => {
+                                if arguments.len() != field_types.len() {
+                                    self.errors.push(TypeCheckError::new(
+                                        format!("Variant '{}' expects {} arguments, got {}", 
+                                               variant_name, field_types.len(), arguments.len()),
+                                        *span
+                                    ));
+                                    return Err(self.errors.last().unwrap().clone());
+                                }
+                                
+                                for (expected_type, arg) in field_types.iter().zip(arguments.iter()) {
+                                    self.check_expression(arg)?;
+                                    let actual_type = self.infer_expression_type(arg)?;
+                                    if !actual_type.is_compatible_with(expected_type) {
+                                        self.errors.push(TypeCheckError::new(
+                                            format!("Expected type '{}' for variant argument, found '{}'", 
+                                                   expected_type.to_string(), actual_type.to_string()),
+                                            arg.span()
+                                        ));
+                                        return Err(self.errors.last().unwrap().clone());
+                                    }
+                                }
+                            },
+                            single_type => {
+                                if arguments.len() != 1 {
+                                    self.errors.push(TypeCheckError::new(
+                                        format!("Variant '{}' expects 1 argument, got {}", 
+                                               variant_name, arguments.len()),
+                                        *span
+                                    ));
+                                    return Err(self.errors.last().unwrap().clone());
+                                }
+                                
+                                self.check_expression(&arguments[0])?;
+                                let actual_type = self.infer_expression_type(&arguments[0])?;
+                                if !actual_type.is_compatible_with(single_type) {
+                                    self.errors.push(TypeCheckError::new(
+                                        format!("Expected type '{}' for variant, found '{}'", 
+                                               single_type.to_string(), actual_type.to_string()),
+                                        arguments[0].span()
+                                    ));
+                                    return Err(self.errors.last().unwrap().clone());
+                                }
+                            }
+                        }
+                    } else {
+                        self.errors.push(TypeCheckError::new(
+                            format!("Variant '{}' not found in enum '{}'", variant_name, enum_name),
+                            *span
+                        ));
+                        return Err(self.errors.last().unwrap().clone());
+                    }
+                } else {
+                    self.errors.push(TypeCheckError::new(
+                        format!("Enum '{}' not found", enum_name),
+                        *span
+                    ));
+                    return Err(self.errors.last().unwrap().clone());
                 }
+
                 Ok(())
             },
 
@@ -551,11 +636,11 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                 let right_type = self.infer_expression_type(right)?;
 
                 match op {
-                    crate::parser::ast::BinaryOp::Add | 
-                    crate::parser::ast::BinaryOp::Subtract | 
-                    crate::parser::ast::BinaryOp::Multiply | 
-                    crate::parser::ast::BinaryOp::Divide |
-                    crate::parser::ast::BinaryOp::Modulo => {
+                    BinaryOp::Add | 
+                    BinaryOp::Subtract | 
+                    BinaryOp::Multiply | 
+                    BinaryOp::Divide |
+                    BinaryOp::Modulo => {
                         if !left_type.is_numeric() || !right_type.is_numeric() {
                             self.errors.push(TypeCheckError::new(
                                 format!("Arithmetic operators require numeric operands, got '{}' and '{}'", 
@@ -566,8 +651,8 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                         }
                     },
 
-                    crate::parser::ast::BinaryOp::Equal | 
-                    crate::parser::ast::BinaryOp::NotEqual => {
+                    BinaryOp::Equal | 
+                    BinaryOp::NotEqual => {
                         if !left_type.is_compatible_with(&right_type) {
                             self.errors.push(TypeCheckError::new(
                                 format!("Cannot compare incompatible types '{}' and '{}'", 
@@ -578,10 +663,10 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                         }
                     },
 
-                    crate::parser::ast::BinaryOp::Less | 
-                    crate::parser::ast::BinaryOp::LessEqual | 
-                    crate::parser::ast::BinaryOp::Greater | 
-                    crate::parser::ast::BinaryOp::GreaterEqual => {
+                    BinaryOp::Less | 
+                    BinaryOp::LessEqual | 
+                    BinaryOp::Greater | 
+                    BinaryOp::GreaterEqual => {
                         if (!left_type.is_numeric() || !right_type.is_numeric()) &&
                            (!left_type.is_string() || !right_type.is_string()) {
                             self.errors.push(TypeCheckError::new(
@@ -593,8 +678,8 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                         }
                     },
 
-                    crate::parser::ast::BinaryOp::And | 
-                    crate::parser::ast::BinaryOp::Or => {
+                    BinaryOp::And | 
+                    BinaryOp::Or => {
                         if !left_type.is_boolean() || !right_type.is_boolean() {
                             self.errors.push(TypeCheckError::new(
                                 format!("Logical operators require boolean operands, got '{}' and '{}'", 
@@ -617,8 +702,8 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
 
                 let expr_type = self.infer_expression_type(expr)?;
                 match op {
-                    crate::parser::ast::UnaryOp::Plus | 
-                    crate::parser::ast::UnaryOp::Minus => {
+                    UnaryOp::Plus | 
+                    UnaryOp::Minus => {
                         if !expr_type.is_numeric() {
                             self.errors.push(TypeCheckError::new(
                                 format!("Unary operators require numeric operand, got type '{}'", expr_type.to_string()),
@@ -628,7 +713,7 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                         }
                     },
 
-                    crate::parser::ast::UnaryOp::Not => {
+                    UnaryOp::Not => {
                         if !expr_type.is_boolean() {
                             self.errors.push(TypeCheckError::new(
                                 format!("Logical not requires boolean operand, got type '{}'", expr_type.to_string()),
@@ -747,11 +832,11 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
 
                 if let Some(_) = op {
                     match op.as_ref().unwrap() {
-                        crate::parser::ast::BinaryOp::Add |
-                        crate::parser::ast::BinaryOp::Subtract |
-                        crate::parser::ast::BinaryOp::Multiply |
-                        crate::parser::ast::BinaryOp::Divide |
-                        crate::parser::ast::BinaryOp::Modulo => {
+                        BinaryOp::Add |
+                        BinaryOp::Subtract |
+                        BinaryOp::Multiply |
+                        BinaryOp::Divide |
+                        BinaryOp::Modulo => {
                             if !target_type.is_numeric() {
                                 self.errors.push(TypeCheckError::new(
                                     format!("Compound assignment requires numeric type, got '{}'", target_type.to_string()),
@@ -775,7 +860,7 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                 for param in parameters {
                     let param_type = param.type_annotation
                         .clone()
-                        .unwrap_or_else(|| crate::parser::ast::Type::Undefined.into())
+                        .unwrap_or_else(|| AstType::Undefined.into())
                         .into();
 
                     let current_scope = Rc::make_mut(&mut self.current_scope);
@@ -829,6 +914,18 @@ Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
 
             Expression::Try { expr, .. } => {
                 self.check_expression(expr)?;
+                
+                // Check that the expression returns a Result type
+                let expr_type = self.infer_expression_type(expr)?;
+                if !expr_type.is_result() {
+                    self.errors.push(TypeCheckError::new(
+                        format!("Try operator '?' can only be used with Result types, got '{}'", 
+                               expr_type.to_string()),
+                        expr.span()
+                    ));
+                    return Err(self.errors.last().unwrap().clone());
+                }
+
                 Ok(())
             },
         }

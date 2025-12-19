@@ -7,7 +7,7 @@ pub enum TokenKind {
     StringLiteral(String),
     NumberLiteral(f64),
     IntegerLiteral(i64),
-    BooleanLiteral(bool),
+    // ✅ BooleanLiteral حذف شد
     Null,
     Undefined,
     
@@ -29,8 +29,8 @@ pub enum TokenKind {
     Import,
     From,
     Return,
-    True,
-    False,
+    True,      // ✅ این‌ها باقی می‌مونن
+    False,     // ✅ این‌ها باقی می‌مونن
     
     Plus,
     Minus,
@@ -80,7 +80,6 @@ pub enum TokenKind {
     Comment,
 }
 
-
 impl fmt::Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -88,7 +87,7 @@ impl fmt::Display for TokenKind {
             TokenKind::StringLiteral(s) => write!(f, "string '{}'", s),
             TokenKind::NumberLiteral(n) => write!(f, "number {}", n),
             TokenKind::IntegerLiteral(i) => write!(f, "integer {}", i),
-            TokenKind::BooleanLiteral(b) => write!(f, "boolean {}", b),
+            // ✅ خط BooleanLiteral حذف شد
             TokenKind::Null => write!(f, "null"),
             TokenKind::Undefined => write!(f, "undefined"),
             TokenKind::Def => write!(f, "'def'"),
@@ -109,8 +108,8 @@ impl fmt::Display for TokenKind {
             TokenKind::Import => write!(f, "'import'"),
             TokenKind::From => write!(f, "'from'"),
             TokenKind::Return => write!(f, "'return'"),
-            TokenKind::True => write!(f, "'true'"),
-            TokenKind::False => write!(f, "'false'"),
+            TokenKind::True => write!(f, "'true'"),      // ✅ باقی می‌مونه
+            TokenKind::False => write!(f, "'false'"),    // ✅ باقی می‌مونه
             TokenKind::Plus => write!(f, "'+'"),
             TokenKind::Minus => write!(f, "'-'"),
             TokenKind::Star => write!(f, "'*'"),
@@ -161,6 +160,7 @@ impl fmt::Display for TokenKind {
     }
 }
 
+// بقیه کد بدون تغییر می‌مونه
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenKind,

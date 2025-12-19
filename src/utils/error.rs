@@ -1,35 +1,22 @@
-use thiserror::Error;
 use crate::utils::position::{Position, Span};
+use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum LexerError {
     #[error("Unexpected character '{character}' at {position}")]
-    UnexpectedCharacter {
-        character: char,
-        position: Position,
-    },
-    
+    UnexpectedCharacter { character: char, position: Position },
+
     #[error("Unterminated string literal at {position}")]
-    UnterminatedString {
-        position: Position,
-    },
-    
+    UnterminatedString { position: Position },
+
     #[error("Unterminated comment at {position}")]
-    UnterminatedComment {
-        position: Position,
-    },
-    
+    UnterminatedComment { position: Position },
+
     #[error("Invalid number format '{text}' at {position}")]
-    InvalidNumberFormat {
-        text: String,
-        position: Position,
-    },
-    
+    InvalidNumberFormat { text: String, position: Position },
+
     #[error("Unknown escape sequence '\\{character}' at {position}")]
-    UnknownEscapeSequence {
-        character: char,
-        position: Position,
-    },
+    UnknownEscapeSequence { character: char, position: Position },
 }
 
 #[derive(Error, Debug, Clone, PartialEq)]
@@ -39,12 +26,9 @@ pub enum CompilerError {
         #[from]
         source: LexerError,
     },
-    
+
     #[error("Parser error at {span}")]
-    Parser {
-        span: Span,
-        message: String,
-    },
+    Parser { span: Span, message: String },
 }
 
 pub type CompilerResult<T> = Result<T, CompilerError>;

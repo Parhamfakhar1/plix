@@ -1,1 +1,3 @@
-print("Adult")
+mut x = 10
+mut y = 20
+mut sum = x+y

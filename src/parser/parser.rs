@@ -1,6 +1,6 @@
 use crate::lexer::{Lexer, Token, TokenKind};
 use crate::utils::error::{CompilerError, CompilerResult};
-use crate::utils::position::Span;
+use crate::utils::position::{Position, Span};
 use super::ast::*;
 
 pub struct Parser {
@@ -20,7 +20,11 @@ impl Parser {
     }
     
     pub fn parse(&mut self) -> CompilerResult<Program> {
-        let start_pos = self.peek().span.start;
+        let start_pos = if self.tokens.is_empty() {
+            Position::new()
+        } else {
+            self.peek().span.start
+        };
         let mut statements = Vec::new();
         
         while !self.is_at_end() {
@@ -44,6 +48,15 @@ impl Parser {
     }
     
     fn parse_statement(&mut self) -> CompilerResult<Option<Statement>> {
+        // Skip comments and newlines
+        while self.match_token(TokenKind::Comment) || self.match_token(TokenKind::Newline) {
+            // Just consume them
+        }
+        
+        if self.is_at_end() {
+            return Ok(None);
+        }
+        
         if self.match_token(TokenKind::Enum) {
             self.parse_enum()
                 .map(|stmt| Some(stmt))
@@ -62,9 +75,11 @@ impl Parser {
         } else if self.match_token(TokenKind::Return) {
             self.parse_return()
                 .map(|stmt| Some(stmt))
-        } else if self.check(TokenKind::Identifier("".to_string())) {
-            self.parse_possible_assignment()
+        } else if self.match_token(TokenKind::Class) {
+            self.parse_class()
+                .map(|stmt| Some(stmt))
         } else {
+            // Parse expression statement (like print("hello"))
             self.parse_expression()
                 .map(|expr| {
                     let span = expr.span();
@@ -118,7 +133,7 @@ impl Parser {
         
         let body = self.parse_block()?;
         
-        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
+        let span = Span::new(self.tokens[self.current - 1].span.start, self.previous().span.end);
         Ok(Statement::Function {
             name,
             parameters,
@@ -216,24 +231,62 @@ impl Parser {
         Ok(Statement::Return(value, span))
     }
     
-    fn parse_possible_assignment(&mut self) -> CompilerResult<Option<Statement>> {
-        let name = self.expect_identifier("identifier")?;
+    fn parse_class(&mut self) -> CompilerResult<Statement> {
+        let name = self.expect_identifier("class name")?;
         
-        if self.match_token(TokenKind::Assign) {
-            let value = self.parse_expression()?;
-            let span = Span::new(self.tokens[self.current - 2].span.start, self.previous().span.end);
-            Ok(Some(Statement::Variable {
-                mutable: false,
-                name,
-                type_annotation: None,
-                value,
-                span,
-            }))
+        let base = if self.match_token(TokenKind::LParen) {
+            let base_name = self.expect_identifier("base class name")?;
+            self.expect(TokenKind::RParen, ")")?;
+            Some(base_name)
         } else {
-            let expr = self.parse_expression()?;
-            let span = expr.span();
-            Ok(Some(Statement::Expression(expr, span)))
+            None
+        };
+        
+        self.expect(TokenKind::Colon, ":")?;
+        
+        let mut fields = Vec::new();
+        let mut methods = Vec::new();
+        
+        self.expect(TokenKind::Indent, "indent")?;
+        
+        while !self.check(TokenKind::Dedent) && !self.is_at_end() {
+            // Skip comments and newlines inside class
+            while self.match_token(TokenKind::Comment) || self.match_token(TokenKind::Newline) {
+                // consume
+            }
+            
+            if self.is_at_end() || self.check(TokenKind::Dedent) {
+                break;
+            }
+            
+            // Check if it's a method (starts with def)
+            if self.check(TokenKind::Def) {
+                self.match_token(TokenKind::Def); // consume 'def'
+                let method = self.parse_function()?;
+                methods.push(method);
+            } else {
+                // It's a field: identifier : type
+                let name = self.expect_identifier("field name")?;
+                self.expect(TokenKind::Colon, ":")?;
+                let type_annotation = Some(self.parse_type()?);
+                fields.push(ClassField {
+                    name,
+                    type_annotation,
+                    visibility: Visibility::Public,
+                });
+            }
         }
+        
+        self.expect(TokenKind::Dedent, "dedent")?;
+        
+        let span = Span::new(self.tokens[self.current - 1].span.start, self.previous().span.end);
+        Ok(Statement::Class {
+            name,
+            base,
+            fields,
+            methods,
+            span,
+        })
     }
     
     fn parse_block(&mut self) -> CompilerResult<Vec<Statement>> {
@@ -245,8 +298,6 @@ impl Parser {
             if let Some(stmt) = self.parse_statement()? {
                 statements.push(stmt);
             }
-            
-            while self.match_token(TokenKind::Newline) {}
         }
         
         self.expect(TokenKind::Dedent, "dedent")?;
@@ -289,9 +340,20 @@ impl Parser {
     fn parse_equality(&mut self) -> CompilerResult<Expression> {
         let mut expr = self.parse_comparison()?;
         
-        while let Some(op) = self.match_equality_op() {
-            let right = self.parse_comparison()?;
-            expr = Expression::binary(expr, op, right);
+        loop {
+            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            
+            if self.check(TokenKind::Equal) {
+                self.advance();
+                let right = self.parse_comparison()?;
+                expr = Expression::binary(expr, BinaryOp::Equal, right);
+            } else if self.check(TokenKind::NotEqual) {
+                self.advance();
+                let right = self.parse_comparison()?;
+                expr = Expression::binary(expr, BinaryOp::NotEqual, right);
+            } else {
+                break;
+            }
         }
         
         Ok(expr)
@@ -300,9 +362,28 @@ impl Parser {
     fn parse_comparison(&mut self) -> CompilerResult<Expression> {
         let mut expr = self.parse_term()?;
         
-        while let Some(op) = self.match_comparison_op() {
-            let right = self.parse_term()?;
-            expr = Expression::binary(expr, op, right);
+        loop {
+            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            
+            if self.check(TokenKind::Less) {
+                self.advance();
+                let right = self.parse_term()?;
+                expr = Expression::binary(expr, BinaryOp::Less, right);
+            } else if self.check(TokenKind::LessEqual) {
+                self.advance();
+                let right = self.parse_term()?;
+                expr = Expression::binary(expr, BinaryOp::LessEqual, right);
+            } else if self.check(TokenKind::Greater) {
+                self.advance();
+                let right = self.parse_term()?;
+                expr = Expression::binary(expr, BinaryOp::Greater, right);
+            } else if self.check(TokenKind::GreaterEqual) {
+                self.advance();
+                let right = self.parse_term()?;
+                expr = Expression::binary(expr, BinaryOp::GreaterEqual, right);
+            } else {
+                break;
+            }
         }
         
         Ok(expr)
@@ -311,9 +392,20 @@ impl Parser {
     fn parse_term(&mut self) -> CompilerResult<Expression> {
         let mut expr = self.parse_factor()?;
         
-        while let Some(op) = self.match_term_op() {
-            let right = self.parse_factor()?;
-            expr = Expression::binary(expr, op, right);
+        loop {
+            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            
+            if self.check(TokenKind::Plus) {
+                self.advance();
+                let right = self.parse_factor()?;
+                expr = Expression::binary(expr, BinaryOp::Add, right);
+            } else if self.check(TokenKind::Minus) {
+                self.advance();
+                let right = self.parse_factor()?;
+                expr = Expression::binary(expr, BinaryOp::Subtract, right);
+            } else {
+                break;
+            }
         }
         
         Ok(expr)
@@ -322,21 +414,51 @@ impl Parser {
     fn parse_factor(&mut self) -> CompilerResult<Expression> {
         let mut expr = self.parse_unary()?;
         
-        while let Some(op) = self.match_factor_op() {
-            let right = self.parse_unary()?;
-            expr = Expression::binary(expr, op, right);
+        loop {
+            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            
+            if self.check(TokenKind::Star) {
+                self.advance();
+                let right = self.parse_unary()?;
+                expr = Expression::binary(expr, BinaryOp::Multiply, right);
+            } else if self.check(TokenKind::Slash) {
+                self.advance();
+                let right = self.parse_unary()?;
+                expr = Expression::binary(expr, BinaryOp::Divide, right);
+            } else if self.check(TokenKind::Percent) {
+                self.advance();
+                let right = self.parse_unary()?;
+                expr = Expression::binary(expr, BinaryOp::Modulo, right);
+            } else {
+                break;
+            }
         }
         
         Ok(expr)
     }
     
     fn parse_unary(&mut self) -> CompilerResult<Expression> {
-        if let Some(op) = self.match_unary_op() {
-            let expr = self.parse_unary()?;
-            return Ok(Expression::unary(op, expr));
-        }
+        while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
         
-        self.parse_try()
+        if self.check(TokenKind::Plus) {
+            self.advance();
+            let expr = self.parse_unary()?;
+            Ok(Expression::unary(UnaryOp::Plus, expr))
+        } else if self.check(TokenKind::Minus) {
+            self.advance();
+            let expr = self.parse_unary()?;
+            Ok(Expression::unary(UnaryOp::Minus, expr))
+        } else if self.check(TokenKind::Bang) {
+            self.advance();
+            let expr = self.parse_unary()?;
+            Ok(Expression::unary(UnaryOp::Not, expr))
+        } else if self.check(TokenKind::Tilde) {
+            self.advance();
+            let expr = self.parse_unary()?;
+            Ok(Expression::unary(UnaryOp::BitNot, expr))
+        } else {
+            self.parse_try()
+        }
     }
 
     fn parse_try(&mut self) -> CompilerResult<Expression> {
@@ -354,36 +476,43 @@ impl Parser {
     }
     
     fn parse_primary(&mut self) -> CompilerResult<Expression> {
+        // Skip newlines and comments before parsing
+        while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+        
         if self.match_token(TokenKind::IntegerLiteral(0)) {
             if let TokenKind::IntegerLiteral(value) = self.previous().kind {
-                return Ok(Expression::integer(value));
+                Ok(Expression::integer(value))
+            } else {
+                unreachable!()
             }
         } else if self.match_token(TokenKind::NumberLiteral(0.0)) {
             if let TokenKind::NumberLiteral(value) = self.previous().kind {
-                return Ok(Expression::float(value));
+                Ok(Expression::float(value))
+            } else {
+                unreachable!()
             }
         } else if self.match_token(TokenKind::StringLiteral("".to_string())) {
             if let TokenKind::StringLiteral(value) = self.previous().kind.clone() {
-                return Ok(Expression::string(value));
-            }
-        } else if self.match_token(TokenKind::BooleanLiteral(false)) {
-            if let TokenKind::BooleanLiteral(value) = self.previous().kind {
-                return Ok(Expression::boolean(value));
+                Ok(Expression::string(value))
+            } else {
+                unreachable!()
             }
         } else if self.match_token(TokenKind::True) {
-            return Ok(Expression::boolean(true));
+            Ok(Expression::boolean(true))
         } else if self.match_token(TokenKind::False) {
-            return Ok(Expression::boolean(false));
+            Ok(Expression::boolean(false))
         } else if self.match_token(TokenKind::Null) {
             let span = self.previous().span;
-            return Ok(Expression::Literal(Literal::Null, span));
+            Ok(Expression::Literal(Literal::Null, span))
         } else if self.match_token(TokenKind::Undefined) {
             let span = self.previous().span;
-            return Ok(Expression::Literal(Literal::Undefined, span));
-        } else if self.match_token(TokenKind::Identifier("".to_string())) {
-            if let TokenKind::Identifier(name) = self.previous().kind.clone() {
-                // Check if this is a variant call
-                if self.match_token(TokenKind::LParen) {
+            Ok(Expression::Literal(Literal::Undefined, span))
+        } else if let TokenKind::Identifier(_) = self.peek().kind {
+            let token = self.advance();
+            if let TokenKind::Identifier(name) = token.kind.clone() {
+                // Check if this is a function call: name(...)
+                if self.check(TokenKind::LParen) {
+                    self.match_token(TokenKind::LParen); // consume (
                     let mut arguments = Vec::new();
                     if !self.check(TokenKind::RParen) {
                         loop {
@@ -394,23 +523,26 @@ impl Parser {
                         }
                     }
                     self.expect(TokenKind::RParen, ")")?;
-                    return Ok(Expression::VariantCall {
-                        enum_name: "".to_string(), // We'll need to resolve this later
-                        variant_name: name,
+                    let func_expr = Expression::identifier(name);
+                    let span = func_expr.span().merge(self.previous().span);
+                    Ok(Expression::Call {
+                        function: Box::new(func_expr),
                         arguments,
-                        span: Span::default(),
-                    });
+                        span,
+                    })
                 } else {
-                    return Ok(Expression::identifier(name));
+                    Ok(Expression::identifier(name))
                 }
+            } else {
+                unreachable!()
             }
         } else if self.match_token(TokenKind::LParen) {
             let expr = self.parse_expression()?;
             self.expect(TokenKind::RParen, ")")?;
-            return Ok(expr);
+            Ok(expr)
+        } else {
+            Err(self.error("Expected expression"))
         }
-        
-        Err(self.error("Expected expression"))
     }
     
     fn parse_type(&mut self) -> CompilerResult<Type> {
@@ -449,167 +581,7 @@ impl Parser {
         }
     }
     
-    fn match_compound_assignment(&mut self) -> bool {
-        matches!(
-            self.peek().kind,
-            TokenKind::PlusAssign |
-            TokenKind::MinusAssign |
-            TokenKind::StarAssign |
-            TokenKind::SlashAssign |
-            TokenKind::PercentAssign
-        )
-    }
-    
-    fn match_equality_op(&mut self) -> Option<BinaryOp> {
-        if self.match_token(TokenKind::Equal) {
-            Some(BinaryOp::Equal)
-        } else if self.match_token(TokenKind::NotEqual) {
-            Some(BinaryOp::NotEqual)
-        } else {
-            None
-        }
-    }
-    
-    fn match_comparison_op(&mut self) -> Option<BinaryOp> {
-        if self.match_token(TokenKind::Less) {
-            Some(BinaryOp::Less)
-        } else if self.match_token(TokenKind::LessEqual) {
-            Some(BinaryOp::LessEqual)
-        } else if self.match_token(TokenKind::Greater) {
-            Some(BinaryOp::Greater)
-        } else if self.match_token(TokenKind::GreaterEqual) {
-            Some(BinaryOp::GreaterEqual)
-        } else {
-            None
-        }
-    }
-    
-    fn match_term_op(&mut self) -> Option<BinaryOp> {
-        if self.match_token(TokenKind::Plus) {
-            Some(BinaryOp::Add)
-        } else if self.match_token(TokenKind::Minus) {
-            Some(BinaryOp::Subtract)
-        } else {
-            None
-        }
-    }
-    
-    fn match_factor_op(&mut self) -> Option<BinaryOp> {
-        if self.match_token(TokenKind::Star) {
-            Some(BinaryOp::Multiply)
-        } else if self.match_token(TokenKind::Slash) {
-            Some(BinaryOp::Divide)
-        } else if self.match_token(TokenKind::Percent) {
-            Some(BinaryOp::Modulo)
-        } else {
-            None
-        }
-    }
-    
-    fn match_unary_op(&mut self) -> Option<UnaryOp> {
-        if self.match_token(TokenKind::Plus) {
-            Some(UnaryOp::Plus)
-        } else if self.match_token(TokenKind::Minus) {
-            Some(UnaryOp::Minus)
-        } else if self.match_token(TokenKind::Bang) {
-            Some(UnaryOp::Not)
-        } else if self.match_token(TokenKind::Tilde) {
-            Some(UnaryOp::BitNot)
-        } else {
-            None
-        }
-    }
-    
-    fn previous_op(&self) -> BinaryOp {
-        match self.previous().kind {
-            TokenKind::PlusAssign => BinaryOp::Add,
-            TokenKind::MinusAssign => BinaryOp::Subtract,
-            TokenKind::StarAssign => BinaryOp::Multiply,
-            TokenKind::SlashAssign => BinaryOp::Divide,
-            TokenKind::PercentAssign => BinaryOp::Modulo,
-            _ => unreachable!(),
-        }
-    }
-    
-    fn match_token(&mut self, kind: TokenKind) -> bool {
-        if self.check(kind) {
-            self.advance();
-            true
-        } else {
-            false
-        }
-    }
-    
-    fn check(&self, kind: TokenKind) -> bool {
-        if self.is_at_end() {
-            return false;
-        }
-        
-        // Handle identifier comparisons correctly
-        match (&self.peek().kind, &kind) {
-            (TokenKind::Identifier(a), TokenKind::Identifier(b)) if a == b => true,
-            (TokenKind::IntegerLiteral(_), TokenKind::IntegerLiteral(_)) => true,
-            (TokenKind::NumberLiteral(_), TokenKind::NumberLiteral(_)) => true,
-            (TokenKind::StringLiteral(_), TokenKind::StringLiteral(_)) => true,
-            (TokenKind::BooleanLiteral(_), TokenKind::BooleanLiteral(_)) => true,
-            (a, b) => a == b,
-        }
-    }
-    
-    fn advance(&mut self) -> &Token {
-        if !self.is_at_end() {
-            self.current += 1;
-        }
-        self.previous()
-    }
-    
-    fn peek(&self) -> &Token {
-        &self.tokens[self.current]
-    }
-    
-    fn previous(&self) -> &Token {
-        &self.tokens[self.current - 1]
-    }
-    
-    fn is_at_end(&self) -> bool {
-        self.peek().kind == TokenKind::EOF || self.current >= self.tokens.len()
-    }
-    
-    fn expect(&mut self, kind: TokenKind, what: &str) -> CompilerResult<()> {
-        if self.match_token(kind) {
-            Ok(())
-        } else {
-            let token = self.peek();
-            Err(CompilerError::Parser {
-                span: token.span,
-                message: format!("Expected {}, found {}", what, token.kind),
-            })
-        }
-    }
-    
-    fn expect_identifier(&mut self, what: &str) -> CompilerResult<String> {
-        if let TokenKind::Identifier(name) = self.peek().kind.clone() {
-            self.advance();
-            Ok(name)
-        } else {
-            let token = self.peek();
-            Err(CompilerError::Parser {
-                span: token.span,
-                message: format!("Expected {}, found {}", what, token.kind),
-            })
-        }
-    }
-    
-    fn error(&self, message: &str) -> CompilerError {
-        let token = self.peek();
-        CompilerError::Parser {
-            span: token.span,
-            message: message.to_string(),
-        }
-    }
-
     fn parse_enum(&mut self) -> CompilerResult<Statement> {
-        // We already consumed the 'enum' keyword in parse_statement
         let name = self.expect_identifier("enum name")?;
         
         let mut generics = Vec::new();
@@ -626,11 +598,10 @@ impl Parser {
         }
         
         let mut variants = Vec::new();
-        let start_span = self.previous().span;
+        let start_pos = self.previous().span.start;
         
-        // Support both C-style { Red, Green } and Python-style : + indent
         if self.match_token(TokenKind::LBrace) {
-            // C-style: enum Color { Red, Green, Blue }
+            // C-style: enum Color { Red, Green }
             while !self.check(TokenKind::RBrace) && !self.is_at_end() {
                 let variant_name = self.expect_identifier("variant name")?;
                 
@@ -700,14 +671,118 @@ impl Parser {
             return Err(self.error("Expected '{' or ':' after enum name"));
         }
         
-        let end_span = self.previous().span;
-        let span = Span::new(start_span.start, end_span.end);
-        
+        let end_pos = self.previous().span.end;
         Ok(Statement::Enum {
             name,
             generics,
             variants,
-            span,
+            span: Span::new(start_pos, end_pos),
         })
+    }
+    
+    // --- Helper methods ---
+    
+    fn match_compound_assignment(&mut self) -> bool {
+        matches!(
+            self.peek().kind,
+            TokenKind::PlusAssign |
+            TokenKind::MinusAssign |
+            TokenKind::StarAssign |
+            TokenKind::SlashAssign |
+            TokenKind::PercentAssign
+        )
+    }
+    
+    fn previous_op(&self) -> BinaryOp {
+        match self.previous().kind {
+            TokenKind::PlusAssign => BinaryOp::Add,
+            TokenKind::MinusAssign => BinaryOp::Subtract,
+            TokenKind::StarAssign => BinaryOp::Multiply,
+            TokenKind::SlashAssign => BinaryOp::Divide,
+            TokenKind::PercentAssign => BinaryOp::Modulo,
+            _ => unreachable!(),
+        }
+    }
+    
+    fn match_token(&mut self, kind: TokenKind) -> bool {
+        if self.check(kind) {
+            self.advance();
+            true
+        } else {
+            false
+        }
+    }
+    
+    fn check(&self, kind: TokenKind) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
+        
+        let current_kind = &self.peek().kind;
+        
+        // Handle literal types specially - only check the variant, not the value
+        match (current_kind, &kind) {
+            (TokenKind::IntegerLiteral(_), TokenKind::IntegerLiteral(_)) => true,
+            (TokenKind::NumberLiteral(_), TokenKind::NumberLiteral(_)) => true,
+            (TokenKind::StringLiteral(_), TokenKind::StringLiteral(_)) => true,
+            (TokenKind::Identifier(a), TokenKind::Identifier(b)) if a == b => true,
+            _ => current_kind == &kind,
+        }
+    }
+    
+    fn advance(&mut self) -> &Token {
+        if !self.is_at_end() {
+            self.current += 1;
+        }
+        self.previous()
+    }
+    
+    fn peek(&self) -> &Token {
+        &self.tokens[self.current]
+    }
+    
+    fn previous(&self) -> &Token {
+        &self.tokens[self.current - 1]
+    }
+    
+    fn is_at_end(&self) -> bool {
+        self.current >= self.tokens.len() || self.peek().kind == TokenKind::EOF
+    }
+    
+    fn expect(&mut self, kind: TokenKind, what: &str) -> CompilerResult<()> {
+        if self.match_token(kind) {
+            Ok(())
+        } else {
+            let token = self.peek();
+            Err(CompilerError::Parser {
+                span: token.span,
+                message: format!("Expected {}, found {}", what, token.kind),
+            })
+        }
+    }
+    
+    fn expect_identifier(&mut self, what: &str) -> CompilerResult<String> {
+        if let TokenKind::Identifier(name) = self.peek().kind.clone() {
+            self.advance();
+            Ok(name)
+        } else {
+            let token = self.peek();
+            Err(CompilerError::Parser {
+                span: token.span,
+                message: format!("Expected {}, found {}", what, token.kind),
+            })
+        }
+    }
+    
+    fn error(&self, message: &str) -> CompilerError {
+        let token = if self.is_at_end() {
+            self.previous()
+        } else {
+            self.peek()
+        };
+        CompilerError::Parser {
+            span: token.span,
+            message: message.to_string(),
+        }
     }
 }
