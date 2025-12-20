@@ -153,3 +153,685 @@ def sort_array(arr: Array<number>, strategy: SortStrategy) -> Array<number> {
 
 # --- ۵. Exception Handling پیشرفته ---
 enum ErrorCode {
+    FileNotFound,
+    PermissionDenied,
+    NetworkError,
+    Timeout
+}
+
+def handle_error(code: ErrorCode, message: string) -> string {
+    match code {
+        case ErrorCode.FileNotFound => {
+            return "File not found: " + message;
+        }
+        case ErrorCode.PermissionDenied => {
+            return "Permission denied: " + message;
+        }
+        case ErrorCode.NetworkError => {
+            return "Network error: " + message;
+        }
+        case ErrorCode.Timeout => {
+            return "Operation timed out: " + message;
+        }
+    }
+}
+
+def retry_operation<T>(operation: fn() -> Result<T, ErrorCode>, max_retries: number) -> Result<T, ErrorCode> {
+    mut attempts: number = 0;
+    
+    while (attempts < max_retries) {
+        match operation() {
+            case Result.Ok(value) => {
+                return Result.Ok(value);
+            }
+            case Result.Err(error) => {
+                attempts = attempts + 1;
+                if (attempts >= max_retries) {
+                    return Result.Err(error);
+                }
+                # Wait before retrying
+                sleep(1000);
+            }
+        }
+    }
+    
+    return Result.Err(ErrorCode.Timeout);
+}
+
+# --- ۶. Concurrency Simulation ---
+def async_operation<T>(value: T, delay: number) -> Promise<T> {
+    return Promise.create(fn(resolve: fn(T) -> void) {
+        setTimeout(fn() {
+            resolve(value);
+        }, delay);
+    });
+}
+
+def parallel_map<T, U>(arr: Array<T>, func: fn(T) -> Promise<U>) -> Promise<Array<U>> {
+    mut promises: Array<Promise<U>> = [];
+    
+    for (item in arr) {
+        promises.push(func(item));
+    }
+    
+    return Promise.all(promises);
+}
+
+# --- ۷. Metaprogramming Features ---
+def create_class(name: string, properties: Array<string>) -> Object {
+    mut class_obj: Object = {};
+    class_obj.name = name;
+    class_obj.properties = properties;
+    
+    class_obj.create_instance = fn() -> Object {
+        mut instance: Object = {};
+        for (prop in properties) {
+            instance[prop] = null;
+        }
+        return instance;
+    };
+    
+    return class_obj;
+}
+
+def add_method(obj: Object, name: string, method: fn() -> any) {
+    obj[name] = method;
+}
+
+# --- ۸. Functional Programming Features ---
+def memoize<T, U>(func: fn(T) -> U) -> fn(T) -> U {
+    mut cache: Object = {};
+    
+    return fn(arg: T) -> U {
+        if (cache[arg] != null) {
+            return cache[arg];
+        }
+        
+        cache[arg] = func(arg);
+        return cache[arg];
+    };
+}
+
+def partial<T, U, V>(func: fn(T, U) -> V, first_arg: T) -> fn(U) -> V {
+    return fn(second_arg: U) -> V {
+        return func(first_arg, second_arg);
+    };
+}
+
+def pipe<T, U, V>(f: fn(T) -> U, g: fn(U) -> V) -> fn(T) -> V {
+    return fn(x: T) -> V {
+        return g(f(x));
+    };
+}
+
+# --- ۹. Advanced Pattern Matching ---
+def deep_match(data: any) -> string {
+    match data {
+        case null => {
+            return "null value";
+        }
+        case number => {
+            if (data < 0) {
+                return "negative number";
+            } else if (data == 0) {
+                return "zero";
+            } else {
+                return "positive number";
+            }
+        }
+        case string => {
+            if (data.length == 0) {
+                return "empty string";
+            } else {
+                return "non-empty string";
+            }
+        }
+        case Array => {
+            if (data.length == 0) {
+                return "empty array";
+            } else {
+                return "non-empty array with " + data.length + " elements";
+            }
+        }
+        case Object => {
+            return "object with " + Object.keys(data).length + " properties";
+        }
+        case _ => {
+            return "unknown type";
+        }
+    }
+}
+
+# --- ۱۰. Advanced Type System Features ---
+type Numeric = number | bigint;
+type StringLike = string | String;
+type Collection<T> = Array<T> | Set<T> | Map<string, T>;
+
+def process_collection<T>(collection: Collection<T>) -> string {
+    match collection {
+        case Array => {
+            return "Processing array with " + collection.length + " elements";
+        }
+        case Set => {
+            return "Processing set with " + collection.size + " elements";
+        }
+        case Map => {
+            return "Processing map with " + collection.size + " entries";
+        }
+    }
+}
+
+# --- ۱۱. Advanced Error Handling ---
+def validate_input<T>(value: T, validators: Array<fn(T) -> boolean>) -> Result<T, Array<string>> {
+    mut errors: Array<string> = [];
+    
+    for (validator in validators) {
+        if (!validator(value)) {
+            errors.push("Validation failed");
+        }
+    }
+    
+    if (errors.length > 0) {
+        return Result.Err(errors);
+    }
+    
+    return Result.Ok(value);
+}
+
+def chain_validations<T>(value: T, validators: Array<fn(T) -> Result<T, string>>) -> Result<T, Array<string>> {
+    mut current: T = value;
+    mut errors: Array<string> = [];
+    
+    for (validator in validators) {
+        match validator(current) {
+            case Result.Ok(validated_value) => {
+                current = validated_value;
+            }
+            case Result.Err(error) => {
+                errors.push(error);
+            }
+        }
+    }
+    
+    if (errors.length > 0) {
+        return Result.Err(errors);
+    }
+    
+    return Result.Ok(current);
+}
+
+# --- ۱۲. Advanced Data Structures ---
+class BinaryTree<T> {
+    value: T;
+    left: BinaryTree<T> | null;
+    right: BinaryTree<T> | null;
+    
+    def __init__(value: T) {
+        self.value = value;
+        self.left = null;
+        self.right = null;
+    }
+    
+    def insert(value: T) {
+        if (value < self.value) {
+            if (self.left == null) {
+                self.left = BinaryTree(value);
+            } else {
+                self.left.insert(value);
+            }
+        } else {
+            if (self.right == null) {
+                self.right = BinaryTree(value);
+            } else {
+                self.right.insert(value);
+            }
+        }
+    }
+    
+    def search(value: T) -> boolean {
+        if (value == self.value) {
+            return true;
+        } else if (value < self.value) {
+            if (self.left == null) {
+                return false;
+            }
+            return self.left.search(value);
+        } else {
+            if (self.right == null) {
+                return false;
+            }
+            return self.right.search(value);
+        }
+    }
+    
+    def inorder_traversal() -> Array<T> {
+        mut result: Array<T> = [];
+        
+        if (self.left != null) {
+            result = result + self.left.inorder_traversal();
+        }
+        
+        result.push(self.value);
+        
+        if (self.right != null) {
+            result = result + self.right.inorder_traversal();
+        }
+        
+        return result;
+    }
+}
+
+# --- ۱۳. Advanced Algorithms ---
+def fibonacci_memoized() -> fn(number) -> number {
+    mut cache: Object = {};
+    
+    return fn(n: number) -> number {
+        if (n <= 1) {
+            return n;
+        }
+        
+        if (cache[n] != null) {
+            return cache[n];
+        }
+        
+        cache[n] = fibonacci_memoized()(n - 1) + fibonacci_memoized()(n - 2);
+        return cache[n];
+    };
+}
+
+def binary_search<T>(arr: Array<T>, target: T, compare: fn(T, T) -> number) -> number {
+    mut left: number = 0;
+    mut right: number = arr.length - 1;
+    
+    while (left <= right) {
+        mut mid: number = (left + right) / 2;
+        mut comparison: number = compare(arr[mid], target);
+        
+        if (comparison == 0) {
+            return mid;
+        } else if (comparison < 0) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    
+    return -1;
+}
+
+# --- ۱۴. Advanced I/O Operations ---
+def read_file_async(filename: string) -> Promise<string> {
+    return Promise.create(fn(resolve: fn(string) -> void, reject: fn(string) -> void) {
+        try {
+            mut content: string = read_file_sync(filename);
+            resolve(content);
+        } catch (error) {
+            reject("Failed to read file: " + error);
+        }
+    });
+}
+
+def write_file_async(filename: string, content: string) -> Promise<void> {
+    return Promise.create(fn(resolve: fn(void) -> void, reject: fn(string) -> void) {
+        try {
+            write_file_sync(filename, content);
+            resolve();
+        } catch (error) {
+            reject("Failed to write file: " + error);
+        }
+    });
+}
+
+def process_file_chain(input_file: string, output_file: string, processors: Array<fn(string) -> string>) -> Promise<void> {
+    return read_file_async(input_file)
+        .then(fn(content: string) -> string {
+            mut result: string = content;
+            for (processor in processors) {
+                result = processor(result);
+            }
+            return result;
+        })
+        .then(fn(processed_content: string) -> Promise<void> {
+            return write_file_async(output_file, processed_content);
+        });
+}
+
+# --- ۱۵. Advanced Mathematical Operations ---
+def matrix_multiply<T>(a: Array<Array<T>>, b: Array<Array<T>>) -> Array<Array<T>> {
+    mut rows_a: number = a.length;
+    mut cols_a: number = a[0].length;
+    mut rows_b: number = b.length;
+    mut cols_b: number = b[0].length;
+    
+    if (cols_a != rows_b) {
+        throw "Matrix dimensions don't match for multiplication";
+    }
+    
+    mut result: Array<Array<T>> = [];
+    
+    for (i in range(rows_a)) {
+        mut row: Array<T> = [];
+        for (j in range(cols_b)) {
+            mut sum: T = 0;
+            for (k in range(cols_a)) {
+                sum = sum + a[i][k] * b[k][j];
+            }
+            row.push(sum);
+        }
+        result.push(row);
+    }
+    
+    return result;
+}
+
+def determinant_2x2(matrix: Array<Array<number>>) -> number {
+    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+}
+
+def determinant_3x3(matrix: Array<Array<number>>) -> number {
+    return matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]) -
+           matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]) +
+           matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]);
+}
+
+# --- ۱۶. Advanced String Processing ---
+def regex_match(pattern: string, text: string) -> Array<string> {
+    # Simple regex implementation for demonstration
+    mut result: Array<string> = [];
+    mut i: number = 0;
+    
+    while (i < text.length) {
+        mut match_found: boolean = true;
+        mut match_text: string = "";
+        
+        for (j in range(pattern.length)) {
+            if (i + j >= text.length || text[i + j] != pattern[j]) {
+                match_found = false;
+                break;
+            }
+            match_text = match_text + text[i + j];
+        }
+        
+        if (match_found) {
+            result.push(match_text);
+            i = i + pattern.length;
+        } else {
+            i = i + 1;
+        }
+    }
+    
+    return result;
+}
+
+def tokenize(text: string, delimiters: Array<string>) -> Array<string> {
+    mut tokens: Array<string> = [text];
+    
+    for (delimiter in delimiters) {
+        mut new_tokens: Array<string> = [];
+        
+        for (token in tokens) {
+            mut parts: Array<string> = token.split(delimiter);
+            for (part in parts) {
+                if (part.length > 0) {
+                    new_tokens.push(part);
+                }
+            }
+        }
+        
+        tokens = new_tokens;
+    }
+    
+    return tokens;
+}
+
+# --- ۱۷. Advanced Testing Framework ---
+class TestSuite {
+    name: string;
+    tests: Array<fn() -> void>;
+    
+    def __init__(name: string) {
+        self.name = name;
+        self.tests = [];
+    }
+    
+    def add_test(test_name: string, test_func: fn() -> void) {
+        self.tests.push(fn() {
+            print("Running test: " + test_name);
+            try {
+                test_func();
+                print("✓ Test passed: " + test_name);
+            } catch (error) {
+                print("✗ Test failed: " + test_name + " - " + error);
+            }
+        });
+    }
+    
+    def run_all() {
+        print("Running test suite: " + self.name);
+        for (test in self.tests) {
+            test();
+        }
+        print("Test suite completed: " + self.name);
+    }
+}
+
+def assert_equal<T>(actual: T, expected: T, message: string = "") {
+    if (actual != expected) {
+        throw "Assertion failed: " + message + " - Expected " + expected + ", got " + actual;
+    }
+}
+
+def assert_true(condition: boolean, message: string = "") {
+    if (!condition) {
+        throw "Assertion failed: " + message;
+    }
+}
+
+# --- ۱۸. Advanced Configuration Management ---
+type Config = {
+    database: {
+        host: string,
+        port: number,
+        username: string,
+        password: string
+    },
+    server: {
+        port: number,
+        host: string,
+        ssl: boolean
+    },
+    logging: {
+        level: string,
+        file: string
+    }
+};
+
+def load_config(filename: string) -> Result<Config, string> {
+    try {
+        mut content: string = read_file_sync(filename);
+        mut config: Config = parse_json(content);
+        return Result.Ok(config);
+    } catch (error) {
+        return Result.Err("Failed to load config: " + error);
+    }
+}
+
+def validate_config(config: Config) -> Result<Config, Array<string>> {
+    mut errors: Array<string> = [];
+    
+    if (config.database.host.length == 0) {
+        errors.push("Database host cannot be empty");
+    }
+    
+    if (config.database.port <= 0 || config.database.port > 65535) {
+        errors.push("Database port must be between 1 and 65535");
+    }
+    
+    if (config.server.port <= 0 || config.server.port > 65535) {
+        errors.push("Server port must be between 1 and 65535");
+    }
+    
+    if (errors.length > 0) {
+        return Result.Err(errors);
+    }
+    
+    return Result.Ok(config);
+}
+
+# --- ۱۹. Advanced Performance Monitoring ---
+class PerformanceTimer {
+    start_time: number;
+    end_time: number;
+    
+    def __init__() {
+        self.start_time = 0;
+        self.end_time = 0;
+    }
+    
+    def start() {
+        self.start_time = get_current_time();
+    }
+    
+    def stop() {
+        self.end_time = get_current_time();
+    }
+    
+    def elapsed() -> number {
+        return self.end_time - self.start_time;
+    }
+    
+    def measure<T>(operation: fn() -> T) -> (T, number) {
+        self.start();
+        mut result: T = operation();
+        self.stop();
+        return (result, self.elapsed());
+    }
+}
+
+def benchmark<T>(operation: fn() -> T, iterations: number) -> (T, number) {
+    mut timer = PerformanceTimer();
+    mut total_time: number = 0;
+    mut result: T;
+    
+    for (i in range(iterations)) {
+        let (op_result, time) = timer.measure(operation);
+        if (i == 0) {
+            result = op_result;
+        }
+        total_time = total_time + time;
+    }
+    
+    return (result, total_time / iterations);
+}
+
+# --- ۲۰. Advanced Logging System ---
+enum LogLevel {
+    Debug,
+    Info,
+    Warning,
+    Error
+}
+
+class Logger {
+    level: LogLevel;
+    output_file: string | null;
+    
+    def __init__(level: LogLevel, output_file: string | null = null) {
+        self.level = level;
+        self.output_file = output_file;
+    }
+    
+    def log(level: LogLevel, message: string) {
+        if (level >= self.level) {
+            mut timestamp: string = get_current_timestamp();
+            mut log_message: string = timestamp + " [" + LogLevel[level] + "] " + message;
+            
+            if (self.output_file != null) {
+                append_to_file(self.output_file, log_message + "\n");
+            } else {
+                print(log_message);
+            }
+        }
+    }
+    
+    def debug(message: string) {
+        self.log(LogLevel.Debug, message);
+    }
+    
+    def info(message: string) {
+        self.log(LogLevel.Info, message);
+    }
+    
+    def warning(message: string) {
+        self.log(LogLevel.Warning, message);
+    }
+    
+    def error(message: string) {
+        self.log(LogLevel.Error, message);
+    }
+}
+
+# --- ۲۱. Advanced Demo Function ---
+def advanced_demo() -> void {
+    print("=== Advanced Plix Features Demo ===");
+    
+    # Test memoization
+    print("\n1. Memoization:");
+    mut fib = memoize(fibonacci_memoized());
+    print("Fibonacci(10): ", fib(10));
+    print("Fibonacci(20): ", fib(20));
+    
+    # Test currying
+    print("\n2. Currying:");
+    mut add = curry(add);
+    mut add_five = add(5);
+    print("add_five(10): ", add_five(10));
+    
+    # Test composition
+    print("\n3. Function Composition:");
+    mut square = fn(x: number) -> number { return x * x; };
+    mut increment = fn(x: number) -> number { return x + 1; };
+    mut square_then_increment = compose(increment, square);
+    print("square_then_increment(5): ", square_then_increment(5));
+    
+    # Test advanced pattern matching
+    print("\n4. Advanced Pattern Matching:");
+    print("deep_match(42): ", deep_match(42));
+    print("deep_match('hello'): ", deep_match("hello"));
+    print("deep_match([]): ", deep_match([]));
+    
+    # Test binary tree
+    print("\n5. Binary Tree:");
+    mut tree = BinaryTree(10);
+    tree.insert(5);
+    tree.insert(15);
+    tree.insert(3);
+    tree.insert(7);
+    print("Tree traversal: ", tree.inorder_traversal());
+    print("Search 7: ", tree.search(7));
+    print("Search 12: ", tree.search(12));
+    
+    # Test matrix operations
+    print("\n6. Matrix Operations:");
+    mut matrix_a = [[1, 2], [3, 4]];
+    mut matrix_b = [[5, 6], [7, 8]];
+    mut result = matrix_multiply(matrix_a, matrix_b);
+    print("Matrix multiplication result: ", result);
+    
+    # Test performance monitoring
+    print("\n7. Performance Monitoring:");
+    mut timer = PerformanceTimer();
+    let (result, time) = timer.measure(fn() -> number {
+        mut sum: number = 0;
+        for (i in range(1000000)) {
+            sum = sum + i;
+        }
+        return sum;
+    });
+    print("Sum calculation took: ", time, "ms");
+    
+    print("\n=== Advanced Demo completed! ===");
+}
+
+# Run the advanced demo
+advanced_demo();

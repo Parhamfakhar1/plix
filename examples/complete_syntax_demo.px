@@ -1,7 +1,5 @@
-# Complete Plix Syntax Demo - Comprehensive Language Features
-# نشان‌دهندهٔ تمام ویژگی‌های کامل زبان Plix
-
-# --- ۱. تعاریف متغیرها و ثوابت ---
+// Complete Plix Syntax Demo - Comprehensive Language Features
+// --- ۱. تعاریف متغیرها و ثوابت ---
 mut x: number = 10;
 mut y: number = 20.5;
 mut name: string = "Plix";
