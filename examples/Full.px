@@ -1,0 +1,286 @@
+# Plix Language Comprehensive Example
+# This file demonstrates all Plix syntax features, type system capabilities, 
+# and language constructs in a single, executable program.
+
+# =============================================================================
+# 1. VARIABLE DECLARATIONS
+# =============================================================================
+
+# Mutable variables with optional type annotations
+mut counter: number = 0
+mut message = "Hello, Plix!"  # Type inferred as string
+mut is_active = true          # Type inferred as boolean
+mut empty_value = null        # Type inferred as null
+
+# Constant declarations (immutable)
+const PI: number = 3.14159
+const MAX_RETRIES = 3         # Type inferred as number
+const APPLICATION_NAME = "Plix Demo"  # Type inferred as string
+
+# =============================================================================
+# 2. TYPE SYSTEM DEMONSTRATION
+# =============================================================================
+
+# Primitive types
+mut number_example: number = 42.5
+mut string_example: string = "Plix is awesome"
+mut boolean_example: boolean = false
+mut null_example: null = null
+mut undefined_example: undefined = undefined
+
+# Array and object types
+mut numbers: Array<number> = [1, 2, 3, 4, 5]
+mut mixed_array = [1, "hello", true, null]  # Inferred as Array<any>
+
+mut person: { name: string, age: number, active: boolean } = {
+    name: "Alice",
+    age: 30,
+    active: true
+}
+
+# Tuple types (fixed-size arrays with specific types)
+mut coordinate: [number, number] = [10.5, 20.3]
+mut person_tuple: [string, number] = ["Bob", 25]
+
+# =============================================================================
+# 3. FUNCTION DEFINITIONS
+# =============================================================================
+
+# Function with explicit type annotations
+def add(a: number, b: number) -> number:
+    return a + b
+
+# Function with type inference
+def greet(name):
+    return "Hello, " + name + "!"
+
+# Function with optional parameters and default values
+def create_user(name: string, age: number = 18, active: boolean = true):
+    return {
+        name: name,
+        age: age,
+        active: active
+    }
+
+# Recursive function
+def factorial(n: number) -> number:
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+# Higher-order function (function that takes another function as parameter)
+def apply_operation(x: number, y: number, operation: fn(number, number) -> number):
+    return operation(x, y)
+
+# Lambda functions
+mut square = fn(x: number) -> number: x * x
+mut add_ten = fn(x): x + 10
+
+# =============================================================================
+# 4. CONTROL FLOW
+# =============================================================================
+
+# If-elif-else statements
+if counter > 10:
+    print("Counter is greater than 10")
+elif counter == 10:
+    print("Counter is exactly 10")
+else:
+    print("Counter is less than 10")
+
+# While loops
+while counter < 5:
+    print("Counter:", counter)
+    counter = counter + 1
+
+# For loops with arrays
+for item in numbers:
+    print("Item:", item)
+
+# For loops with ranges (using array literals)
+for i in [0, 1, 2, 3, 4]:
+    print("Index:", i)
+
+# =============================================================================
+# 5. ERROR HANDLING WITH RESULT TYPE
+# =============================================================================
+
+# Generic Result type for explicit error handling
+enum Result<T, E> { Ok(T), Err(E) }
+
+# Function that returns Result type
+def safe_divide(dividend: number, divisor: number) -> Result<number, string>:
+    if divisor == 0:
+        return Result.Err("Division by zero is not allowed")
+    return Result.Ok(dividend / divisor)
+
+# Function that uses the ? operator for error propagation
+def calculate_average(numbers: Array<number>) -> Result<number, string>:
+    if numbers.length == 0:
+        return Result.Err("Cannot calculate average of empty array")
+    
+    mut sum = 0
+    for num in numbers:
+        sum = sum + num
+    
+    mut count = numbers.length
+    mut average = safe_divide(sum, count)?  # ? operator propagates errors
+    return Result.Ok(average)
+
+# =============================================================================
+# 6. CLASSES AND OBJECT-ORIENTED PROGRAMMING
+# =============================================================================
+
+# Base class with fields and methods
+class Animal:
+    name: string
+    species: string
+    age: number
+    
+    def __init__(self, name: string, species: string, age: number):
+        self.name = name
+        self.species = species
+        self.age = age
+    
+    def make_sound(self) -> string:
+        return "Some generic animal sound"
+    
+    def get_info(self) -> string:
+        return self.name + " is a " + self.species + " and is " + self.age + " years old"
+
+# Inherited class
+class Dog(Animal):
+    breed: string
+    
+    def __init__(self, name: string, breed: string, age: number):
+        super.__init__(name, "Dog", age)
+        self.breed = breed
+    
+    def make_sound(self) -> string:
+        return "Woof! Woof!"
+    
+    def get_dog_info(self) -> string:
+        return self.get_info() + " and is a " + self.breed
+
+# =============================================================================
+# 7. ENUMERATIONS AND PATTERN MATCHING
+# =============================================================================
+
+# Simple enum
+enum Color { Red, Green, Blue }
+
+# Generic enum with data
+enum Shape:
+    Circle(radius: number)
+    Rectangle(width: number, height: number)
+    Triangle(side_a: number, side_b: number, side_c: number)
+
+# Function using pattern matching
+def describe_shape(shape: Shape) -> string:
+    match shape:
+        case Shape.Circle(radius):
+            return "A circle with radius " + radius
+        case Shape.Rectangle(width, height):
+            return "A rectangle " + width + "x" + height
+        case Shape.Triangle(a, b, c):
+            return "A triangle with sides " + a + ", " + b + ", " + c
+
+# =============================================================================
+# 8. SMART MUTABILITY DEMONSTRATION
+# =============================================================================
+
+# Smart Mutability™ prevents accidental reassignment after first use
+mut smart_list = [1, 2, 3]
+# smart_list = [4, 5, 6]  # This would cause a compile-time error after first use
+
+# However, mutations within the same scope before any usage are allowed
+mut flexible_var = "initial"
+flexible_var = "updated"  # This is allowed
+print("Flexible variable:", flexible_var)
+
+# =============================================================================
+# 9. BUILT-IN FUNCTIONS AND OPERATIONS
+# =============================================================================
+
+# Mathematical operations
+mut sum_result = add(10, 20)
+mut product_result = 5 * 6
+mut division_result = 15 / 3
+mut modulo_result = 17 % 5
+
+# String operations
+mut full_message = message + " - Welcome to Plix!"
+mut message_length = full_message.length
+
+# Array operations
+mut new_numbers = numbers.push(6)
+mut first_item = numbers[0]
+mut array_length = numbers.length
+
+# Type checking and conversion
+mut is_number = typeof(sum_result) == "number"
+mut string_version = string(sum_result)
+
+# =============================================================================
+# 10. COMPLEX EXAMPLE: COMPLETE APPLICATION
+# =============================================================================
+
+# Main application logic
+def run_demo():
+    print("=== Plix Language Comprehensive Demo ===")
+    
+    # Demonstrate basic operations
+    print("Basic arithmetic:", add(15, 25))
+    print("Greeting:", greet("Developer"))
+    print("Factorial of 5:", factorial(5))
+    
+    # Demonstrate error handling
+    mut division_result = safe_divide(10, 2)
+    match division_result:
+        case Result.Ok(value):
+            print("Division successful:", value)
+        case Result.Err(error):
+            print("Division error:", error)
+    
+    mut average_result = calculate_average([10, 20, 30, 40, 50])
+    match average_result:
+        case Result.Ok(avg):
+            print("Average:", avg)
+        case Result.Err(err):
+            print("Average calculation error:", err)
+    
+    # Demonstrate classes and inheritance
+    mut my_dog = Dog("Buddy", "Golden Retriever", 3)
+    print("Dog sound:", my_dog.make_sound())
+    print("Dog info:", my_dog.get_dog_info())
+    
+    # Demonstrate enums and pattern matching
+    mut circle = Shape.Circle(5.0)
+    mut rectangle = Shape.Rectangle(10.0, 20.0)
+    mut triangle = Shape.Triangle(3.0, 4.0, 5.0)
+    
+    print("Shape descriptions:")
+    print("  -", describe_shape(circle))
+    print("  -", describe_shape(rectangle))
+    print("  -", describe_shape(triangle))
+    
+    # Demonstrate higher-order functions
+    mut result1 = apply_operation(10, 5, add)
+    mut result2 = apply_operation(8, 3, fn(a, b): a - b)
+    print("Higher-order function results:", result1, result2)
+    
+    # Demonstrate lambda functions
+    print("Square of 7:", square(7))
+    print("15 + 10:", add_ten(15))
+    
+    print("=== Demo completed successfully! ===")
+
+# =============================================================================
+# 11. PROGRAM EXECUTION
+# =============================================================================
+
+# Execute the main demo function
+run_demo()
+
+# Final output to confirm successful execution
+print("Plix comprehensive example executed successfully!")

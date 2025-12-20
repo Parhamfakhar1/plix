@@ -1,4 +1,0 @@
-const x: number = 10;
-def add(a: number, b: number) -> number {
-    return a + b;
-}

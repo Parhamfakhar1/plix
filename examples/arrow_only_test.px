@@ -1,3 +1,0 @@
-const x: number = 10;
-def test() -> void {
-};
