@@ -1,0 +1,3837 @@
+# Functional Programming Features Demo
+# نشان‌دهندهٔ ویژگی‌های برنامه‌نویسی تابعی در Plix
+
+# --- ۱. توابع مرتبه بالا (Higher-Order Functions) ---
+def map<T, U>(arr: Array<T>, func: fn(T) -> U) -> Array<U> {
+    mut result: Array<U> = [];
+    for (item in arr) {
+        result.push(func(item));
+    }
+    return result;
+}
+
+def filter<T>(arr: Array<T>, predicate: fn(T) -> boolean) -> Array<T> {
+    mut result: Array<T> = [];
+    for (item in arr) {
+        if (predicate(item)) {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+def reduce<T, U>(arr: Array<T>, initial: U, reducer: fn(U, T) -> U) -> U {
+    mut result: U = initial;
+    for (item in arr) {
+        result = reducer(result, item);
+    }
+    return result;
+}
+
+def compose<T, U, V>(f: fn(U) -> V, g: fn(T) -> U) -> fn(T) -> V {
+    return fn(x: T) -> V {
+        return f(g(x));
+    };
+}
+
+def curry<T, U, V>(f: fn(T, U) -> V) -> fn(T) -> fn(U) -> V {
+    return fn(x: T) -> fn(U) -> V {
+        return fn(y: U) -> V {
+            return f(x, y);
+        };
+    };
+}
+
+def partial<T, U, V>(f: fn(T, U) -> V, first_arg: T) -> fn(U) -> V {
+    return fn(second_arg: U) -> V {
+        return f(first_arg, second_arg);
+    };
+}
+
+# --- ۲. توابع لامبدا و بستارها (Closures) ---
+def create_counter(initial: number) -> fn() -> number {
+    mut count: number = initial;
+    return fn() -> number {
+        count = count + 1;
+        return count;
+    };
+}
+
+def create_adder(x: number) -> fn(number) -> number {
+    return fn(y: number) -> number {
+        return x + y;
+    };
+}
+
+def create_multiplier(factor: number) -> fn(Array<number>) -> Array<number> {
+    return fn(arr: Array<number>) -> Array<number> {
+        return map(arr, fn(x: number) -> number { return x * factor; });
+    };
+}
+
+# --- ۳. توابع بازگشتی (Recursive Functions) ---
+def factorial(n: number) -> number {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+def fibonacci(n: number) -> number {
+    if (n <= 1) {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+def gcd(a: number, b: number) -> number {
+    if (b == 0) {
+        return a;
+    }
+    return gcd(b, a % b);
+}
+
+def quick_sort<T>(arr: Array<T>, compare: fn(T, T) -> number) -> Array<T> {
+    if (arr.length <= 1) {
+        return arr;
+    }
+    
+    mut pivot: T = arr[arr.length / 2];
+    mut left: Array<T> = [];
+    mut middle: Array<T> = [];
+    mut right: Array<T> = [];
+    
+    for (item in arr) {
+        mut comparison: number = compare(item, pivot);
+        if (comparison < 0) {
+            left.push(item);
+        } else if (comparison == 0) {
+            middle.push(item);
+        } else {
+            right.push(item);
+        }
+    }
+    
+    return quick_sort(left, compare) + middle + quick_sort(right, compare);
+}
+
+def binary_search<T>(arr: Array<T>, target: T, compare: fn(T, T) -> number) -> number {
+    def search(left: number, right: number) -> number {
+        if (left > right) {
+            return -1;
+        }
+        
+        mut mid: number = (left + right) / 2;
+        mut comparison: number = compare(arr[mid], target);
+        
+        if (comparison == 0) {
+            return mid;
+        } else if (comparison < 0) {
+            return search(mid + 1, right);
+        } else {
+            return search(left, mid - 1);
+        }
+    }
+    
+    return search(0, arr.length - 1);
+}
+
+# --- ۴. توابع با حالت‌های غیرمحلی (Stateful Functions) ---
+def create_memoized_fibonacci() -> fn(number) -> number {
+    mut cache: Object = {};
+    
+    return fn(n: number) -> number {
+        if (cache[n] != null) {
+            return cache[n];
+        }
+        
+        if (n <= 1) {
+            cache[n] = n;
+        } else {
+            cache[n] = memoized_fibonacci(n - 1) + memoized_fibonacci(n - 2);
+        }
+        
+        return cache[n];
+    };
+}
+
+def create_accumulator(initial: number) -> Object {
+    mut sum: number = initial;
+    
+    return {
+        add: fn(value: number) -> number {
+            sum = sum + value;
+            return sum;
+        },
+        subtract: fn(value: number) -> number {
+            sum = sum - value;
+            return sum;
+        },
+        get: fn() -> number {
+            return sum;
+        },
+        reset: fn() -> number {
+            sum = initial;
+            return sum;
+        }
+    };
+}
+
+# --- ۵. توابع با پارامترهای اختیاری و پیش‌فرض ---
+def greet(name: string, greeting: string = "Hello", punctuation: string = "!") -> string {
+    return greeting + ", " + name + punctuation;
+}
+
+def calculate_total(price: number, tax_rate: number = 0.08, discount: number = 0, shipping: number = 0) -> number {
+    mut total: number = price * (1 + tax_rate);
+    total = total * (1 - discount);
+    total = total + shipping;
+    return total;
+}
+
+def process_data<T, U>(data: Array<T>, processor: fn(T) -> U, validator: fn(U) -> boolean = fn(x: U) -> boolean { return true; }) -> Array<U> {
+    mut result: Array<U> = [];
+    for (item in data) {
+        mut processed: U = processor(item);
+        if (validator(processed)) {
+            result.push(processed);
+        }
+    }
+    return result;
+}
+
+# --- ۶. توابع با نوع‌های جنریک ---
+def identity<T>(value: T) -> T {
+    return value;
+}
+
+def swap<T, U>(a: T, b: U) -> (U, T) {
+    return (b, a);
+}
+
+def pair<T, U>(first: T, second: U) -> { first: T, second: U } {
+    return { first: first, second: second };
+}
+
+def first<T, U>(pair: { first: T, second: U }) -> T {
+    return pair.first;
+}
+
+def second<T, U>(pair: { first: T, second: U }) -> U {
+    return pair.second;
+}
+
+def zip<T, U>(arr1: Array<T>, arr2: Array<U>) -> Array<(T, U)> {
+    mut result: Array<(T, U)> = [];
+    mut len: number = min(arr1.length, arr2.length);
+    
+    for (i in range(len)) {
+        result.push((arr1[i], arr2[i]));
+    }
+    
+    return result;
+}
+
+def unzip<T, U>(pairs: Array<(T, U)>) -> (Array<T>, Array<U>) {
+    mut firsts: Array<T> = [];
+    mut seconds: Array<U> = [];
+    
+    for (pair in pairs) {
+        firsts.push(pair[0]);
+        seconds.push(pair[1]);
+    }
+    
+    return (firsts, seconds);
+}
+
+# --- ۷. توابع با الگوی ترکیب (Composition Pattern) ---
+def pipe<T, U, V>(f: fn(T) -> U, g: fn(U) -> V) -> fn(T) -> V {
+    return fn(x: T) -> V {
+        return g(f(x));
+    };
+}
+
+def compose3<T, U, V, W>(f: fn(V) -> W, g: fn(U) -> V, h: fn(T) -> U) -> fn(T) -> W {
+    return fn(x: T) -> W {
+        return f(g(h(x)));
+    };
+}
+
+def chain<T>(functions: Array<fn(T) -> T>) -> fn(T) -> T {
+    return fn(initial: T) -> T {
+        mut result: T = initial;
+        for (func in functions) {
+            result = func(result);
+        }
+        return result;
+    };
+}
+
+# --- ۸. توابع با الگوی کاری (Currying Pattern) ---
+def add_curried(a: number) -> fn(number) -> number {
+    return fn(b: number) -> number {
+        return a + b;
+    };
+}
+
+def multiply_curried(a: number) -> fn(number) -> number {
+    return fn(b: number) -> number {
+        return a * b;
+    };
+}
+
+def power_curried(base: number) -> fn(number) -> number {
+    return fn(exponent: number) -> number {
+        return base ** exponent;
+    };
+}
+
+# --- ۹. توابع با الگوی جزئی (Partial Application) ---
+def partial_add(x: number) -> fn(number) -> number {
+    return partial(add, x);
+}
+
+def partial_multiply(x: number) -> fn(number) -> number {
+    return partial(multiply, x);
+}
+
+def partial_power(base: number) -> fn(number) -> number {
+    return partial(power, base);
+}
+
+# --- ۱۰. توابع با الگوی نقشه‌برداری (Mapping Pattern) ---
+def square_all(numbers: Array<number>) -> Array<number> {
+    return map(numbers, fn(x: number) -> number { return x * x; });
+}
+
+def double_all(numbers: Array<number>) -> Array<number> {
+    return map(numbers, fn(x: number) -> number { return x * 2; });
+}
+
+def to_uppercase_all(strings: Array<string>) -> Array<string> {
+    return map(strings, fn(s: string) -> string { return s.to_uppercase(); });
+}
+
+def filter_even(numbers: Array<number>) -> Array<number> {
+    return filter(numbers, fn(x: number) -> boolean { return x % 2 == 0; });
+}
+
+def filter_positive(numbers: Array<number>) -> Array<number> {
+    return filter(numbers, fn(x: number) -> boolean { return x > 0; });
+}
+
+def filter_long_strings(strings: Array<string>, min_length: number) -> Array<string> {
+    return filter(strings, fn(s: string) -> boolean { return s.length >= min_length; });
+}
+
+# --- ۱۱. توابع با الگوی کاهش (Reduction Pattern) ---
+def sum_array(numbers: Array<number>) -> number {
+    return reduce(numbers, 0, fn(acc: number, x: number) -> number { return acc + x; });
+}
+
+def product_array(numbers: Array<number>) -> number {
+    return reduce(numbers, 1, fn(acc: number, x: number) -> number { return acc * x; });
+}
+
+def max_array(numbers: Array<number>) -> number {
+    return reduce(numbers, numbers[0], fn(acc: number, x: number) -> number { return max(acc, x); });
+}
+
+def min_array(numbers: Array<number>) -> number {
+    return reduce(numbers, numbers[0], fn(acc: number, x: number) -> number { return min(acc, x); });
+}
+
+def concatenate_strings(strings: Array<string>) -> string {
+    return reduce(strings, "", fn(acc: string, s: string) -> string { return acc + s; });
+}
+
+def count_occurrences<T>(arr: Array<T>, target: T) -> number {
+    return reduce(arr, 0, fn(acc: number, item: T) -> number {
+        return acc + (item == target ? 1 : 0);
+    });
+}
+
+# --- ۱۲. توابع با الگوی تبدیل (Transformation Pattern) ---
+def reverse_string(s: string) -> string {
+    mut result: string = "";
+    for (i in range(s.length - 1, -1, -1)) {
+        result = result + s[i];
+    }
+    return result;
+}
+
+def capitalize_words(s: string) -> string {
+    mut words = s.split(" ");
+    mut result: Array<string> = [];
+    for (word in words) {
+        if (word.length > 0) {
+            result.push(word[0].to_uppercase() + word.substring(1).to_lowercase());
+        }
+    }
+    return result.join(" ");
+}
+
+def extract_digits(s: string) -> Array<number> {
+    mut result: Array<number> = [];
+    for (char in s) {
+        if (char.is_digit()) {
+            result.push(char.to_number());
+        }
+    }
+    return result;
+}
+
+def extract_letters(s: string) -> Array<string> {
+    mut result: Array<string> = [];
+    for (char in s) {
+        if (char.is_letter()) {
+            result.push(char.to_lowercase());
+        }
+    }
+    return result;
+}
+
+# --- ۱۳. توابع با الگوی جستجو (Search Pattern) ---
+def find_first<T>(arr: Array<T>, predicate: fn(T) -> boolean) -> T | null {
+    for (item in arr) {
+        if (predicate(item)) {
+            return item;
+        }
+    }
+    return null;
+}
+
+def find_last<T>(arr: Array<T>, predicate: fn(T) -> boolean) -> T | null {
+    for (i in range(arr.length - 1, -1, -1)) {
+        if (predicate(arr[i])) {
+            return arr[i];
+        }
+    }
+    return null;
+}
+
+def find_all<T>(arr: Array<T>, predicate: fn(T) -> boolean) -> Array<T> {
+    mut result: Array<T> = [];
+    for (item in arr) {
+        if (predicate(item)) {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+def find_index<T>(arr: Array<T>, predicate: fn(T) -> boolean) -> number {
+    for (i in range(arr.length)) {
+        if (predicate(arr[i])) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+# --- ۱۴. توابع با الگوی مرتب‌سازی (Sorting Pattern) ---
+def sort_numbers_asc(numbers: Array<number>) -> Array<number> {
+    return quick_sort(numbers, fn(a: number, b: number) -> number { return a - b; });
+}
+
+def sort_numbers_desc(numbers: Array<number>) -> Array<number> {
+    return quick_sort(numbers, fn(a: number, b: number) -> number { return b - a; });
+}
+
+def sort_strings_asc(strings: Array<string>) -> Array<string> {
+    return quick_sort(strings, fn(a: string, b: string) -> number {
+        if (a < b) return -1;
+        if (a > b) return 1;
+        return 0;
+    });
+}
+
+def sort_by_length(strings: Array<string>) -> Array<string> {
+    return quick_sort(strings, fn(a: string, b: string) -> number { return a.length - b.length; });
+}
+
+def sort_by_property<T>(arr: Array<T>, property: string) -> Array<T> {
+    return quick_sort(arr, fn(a: T, b: T) -> number {
+        return a[property] - b[property];
+    });
+}
+
+# --- ۱۵. توابع با الگوی گروه‌بندی (Grouping Pattern) ---
+def group_by<T, K>(arr: Array<T>, key_func: fn(T) -> K) -> Object {
+    mut result: Object = {};
+    for (item in arr) {
+        mut key: K = key_func(item);
+        if (result[key] == null) {
+            result[key] = [];
+        }
+        result[key].push(item);
+    }
+    return result;
+}
+
+def group_by_length(strings: Array<string>) -> Object {
+    return group_by(strings, fn(s: string) -> number { return s.length; });
+}
+
+def group_by_first_letter(strings: Array<string>) -> Object {
+    return group_by(strings, fn(s: string) -> string { return s[0].to_lowercase(); });
+}
+
+def group_by_parity(numbers: Array<number>) -> Object {
+    return group_by(numbers, fn(n: number) -> string { return (n % 2 == 0) ? "even" : "odd"; });
+}
+
+# --- ۱۶. توابع با الگوی ادغام (Merging Pattern) ---
+def merge_objects<T>(obj1: Object, obj2: Object) -> Object {
+    mut result: Object = {};
+    for (key in Object.keys(obj1)) {
+        result[key] = obj1[key];
+    }
+    for (key in Object.keys(obj2)) {
+        result[key] = obj2[key];
+    }
+    return result;
+}
+
+def merge_arrays<T>(arr1: Array<T>, arr2: Array<T>) -> Array<T> {
+    mut result: Array<T> = arr1.copy();
+    for (item in arr2) {
+        result.push(item);
+    }
+    return result;
+}
+
+def merge_sorted_arrays<T>(arr1: Array<T>, arr2: Array<T>, compare: fn(T, T) -> number) -> Array<T> {
+    mut result: Array<T> = [];
+    mut i: number = 0;
+    mut j: number = 0;
+    
+    while (i < arr1.length && j < arr2.length) {
+        if (compare(arr1[i], arr2[j]) <= 0) {
+            result.push(arr1[i]);
+            i = i + 1;
+        } else {
+            result.push(arr2[j]);
+            j = j + 1;
+        }
+    }
+    
+    while (i < arr1.length) {
+        result.push(arr1[i]);
+        i = i + 1;
+    }
+    
+    while (j < arr2.length) {
+        result.push(arr2[j]);
+        j = j + 1;
+    }
+    
+    return result;
+}
+
+# --- ۱۷. توابع با الگوی تبدیل داده‌ها (Data Transformation) ---
+def flatten<T>(arr: Array<Array<T>>) -> Array<T> {
+    mut result: Array<T> = [];
+    for (subarray in arr) {
+        for (item in subarray) {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+def transpose_matrix<T>(matrix: Array<Array<T>>) -> Array<Array<T>> {
+    if (matrix.length == 0) {
+        return [];
+    }
+    
+    mut result: Array<Array<T>> = [];
+    mut rows: number = matrix.length;
+    mut cols: number = matrix[0].length;
+    
+    for (j in range(cols)) {
+        mut row: Array<T> = [];
+        for (i in range(rows)) {
+            row.push(matrix[i][j]);
+        }
+        result.push(row);
+    }
+    
+    return result;
+}
+
+def rotate_matrix_90<T>(matrix: Array<Array<T>>) -> Array<Array<T>> {
+    mut transposed = transpose_matrix(matrix);
+    mut result: Array<Array<T>> = [];
+    
+    for (row in transposed) {
+        result.push(row.reverse());
+    }
+    
+    return result;
+}
+
+# --- ۱۸. توابع با الگوی اعتبارسنجی (Validation Pattern) ---
+def validate_email(email: string) -> boolean {
+    # Simple email validation
+    if (email.length < 5) {
+        return false;
+    }
+    
+    mut at_index: number = email.index_of("@");
+    if (at_index == -1 || at_index == 0 || at_index == email.length - 1) {
+        return false;
+    }
+    
+    mut dot_index: number = email.index_of(".", at_index);
+    if (dot_index == -1 || dot_index == at_index + 1 || dot_index == email.length - 1) {
+        return false;
+    }
+    
+    return true;
+}
+
+def validate_password(password: string) -> boolean {
+    if (password.length < 8) {
+        return false;
+    }
+    
+    mut has_upper: boolean = false;
+    mut has_lower: boolean = false;
+    mut has_digit: boolean = false;
+    mut has_special: boolean = false;
+    
+    for (char in password) {
+        if (char.is_uppercase()) {
+            has_upper = true;
+        } else if (char.is_lowercase()) {
+            has_lower = true;
+        } else if (char.is_digit()) {
+            has_digit = true;
+        } else {
+            has_special = true;
+        }
+    }
+    
+    return has_upper && has_lower && has_digit && has_special;
+}
+
+def validate_phone(phone: string) -> boolean {
+    # Simple phone validation (digits and common separators only)
+    mut cleaned: string = phone.replace("-", "").replace(" ", "").replace("(", "").replace(")", "");
+    
+    if (cleaned.length < 10 || cleaned.length > 15) {
+        return false;
+    }
+    
+    for (char in cleaned) {
+        if (!char.is_digit()) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+# --- ۱۹. توابع با الگوی پردازش رشته‌ها (String Processing) ---
+def tokenize(text: string, delimiters: Array<string>) -> Array<string> {
+    mut tokens: Array<string> = [text];
+    
+    for (delimiter in delimiters) {
+        mut new_tokens: Array<string> = [];
+        
+        for (token in tokens) {
+            mut parts: Array<string> = token.split(delimiter);
+            for (part in parts) {
+                if (part.length > 0) {
+                    new_tokens.push(part);
+                }
+            }
+        }
+        
+        tokens = new_tokens;
+    }
+    
+    return tokens;
+}
+
+def extract_words(text: string) -> Array<string> {
+    mut cleaned: string = text.replace(/[^a-zA-Z\s]/g, "");
+    return cleaned.trim().split(" ").filter(fn(s: string) -> boolean { return s.length > 0; });
+}
+
+def count_words(text: string) -> number {
+    return extract_words(text).length;
+}
+
+def word_frequency(text: string) -> Object {
+    mut words = extract_words(text);
+    mut frequency: Object = {};
+    
+    for (word in words) {
+        mut lower_word: string = word.to_lowercase();
+        if (frequency[lower_word] == null) {
+            frequency[lower_word] = 0;
+        }
+        frequency[lower_word] = frequency[lower_word] + 1;
+    }
+    
+    return frequency;
+}
+
+# --- ۲۰. توابع با الگوی پردازش اعداد (Number Processing) ---
+def is_prime(n: number) -> boolean {
+    if (n <= 1) {
+        return false;
+    }
+    for (i in range(2, n ** 0.5 + 1)) {
+        if (n % i == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+def sieve_of_eratosthenes(limit: number) -> Array<number> {
+    mut is_prime_arr: Array<boolean> = [];
+    for (i in range(limit + 1)) {
+        is_prime_arr.push(true);
+    }
+    
+    is_prime_arr[0] = false;
+    is_prime_arr[1] = false;
+    
+    for (i in range(2, limit ** 0.5 + 1)) {
+        if (is_prime_arr[i]) {
+            for (j in range(i * i, limit + 1, i)) {
+                is_prime_arr[j] = false;
+            }
+        }
+    }
+    
+    mut primes: Array<number> = [];
+    for (i in range(2, limit + 1)) {
+        if (is_prime_arr[i]) {
+            primes.push(i);
+        }
+    }
+    
+    return primes;
+}
+
+def prime_factorization(n: number) -> Array<number> {
+    mut factors: Array<number> = [];
+    mut divisor: number = 2;
+    
+    while (n > 1) {
+        while (n % divisor == 0) {
+            factors.push(divisor);
+            n = n / divisor;
+        }
+        divisor = divisor + 1;
+        if (divisor * divisor > n && n > 1) {
+            factors.push(n);
+            break;
+        }
+    }
+    
+    return factors;
+}
+
+def gcd_of_array(numbers: Array<number>) -> number {
+    mut result: number = numbers[0];
+    for (i in range(1, numbers.length)) {
+        result = gcd(result, numbers[i]);
+    }
+    return result;
+}
+
+def lcm_of_array(numbers: Array<number>) -> number {
+    mut result: number = numbers[0];
+    for (i in range(1, numbers.length)) {
+        result = (result * numbers[i]) / gcd(result, numbers[i]);
+    }
+    return result;
+}
+
+# --- ۲۱. توابع با الگوی پردازش تاریخ و زمان ---
+def is_leap_year(year: number) -> boolean {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+def days_in_month(month: number, year: number) -> number {
+    if (month == 2) {
+        return is_leap_year(year) ? 29 : 28;
+    } else if ([4, 6, 9, 11].contains(month)) {
+        return 30;
+    } else {
+        return 31;
+    }
+}
+
+def day_of_year(date: { year: number, month: number, day: number }) -> number {
+    mut days: number = date.day;
+    for (m in range(1, date.month)) {
+        days = days + days_in_month(m, date.year);
+    }
+    return days;
+}
+
+def days_between_dates(date1: { year: number, month: number, day: number }, date2: { year: number, month: number, day: number }) -> number {
+    mut days1: number = day_of_year(date1);
+    mut days2: number = day_of_year(date2);
+    
+    # Add years difference
+    for (y in range(date1.year, date2.year)) {
+        days2 = days2 + (is_leap_year(y) ? 366 : 365);
+    }
+    
+    return days2 - days1;
+}
+
+# --- ۲۲. توابع با الگوی پردازش ماتریس ---
+def matrix_multiply<T>(a: Array<Array<T>>, b: Array<Array<T>>) -> Array<Array<T>> {
+    mut rows_a: number = a.length;
+    mut cols_a: number = a[0].length;
+    mut rows_b: number = b.length;
+    mut cols_b: number = b[0].length;
+    
+    if (cols_a != rows_b) {
+        throw "Matrix dimensions don't match for multiplication";
+    }
+    
+    mut result: Array<Array<T>> = [];
+    
+    for (i in range(rows_a)) {
+        mut row: Array<T> = [];
+        for (j in range(cols_b)) {
+            mut sum: T = 0;
+            for (k in range(cols_a)) {
+                sum = sum + (a[i][k] as any) * (b[k][j] as any);
+            }
+            row.push(sum);
+        }
+        result.push(row);
+    }
+    
+    return result;
+}
+
+def matrix_transpose<T>(matrix: Array<Array<T>>) -> Array<Array<T>> {
+    if (matrix.length == 0) {
+        return [];
+    }
+    
+    mut result: Array<Array<T>> = [];
+    mut rows: number = matrix.length;
+    mut cols: number = matrix[0].length;
+    
+    for (j in range(cols)) {
+        mut row: Array<T> = [];
+        for (i in range(rows)) {
+            row.push(matrix[i][j]);
+        }
+        result.push(row);
+    }
+    
+    return result;
+}
+
+def matrix_determinant_2x2(matrix: Array<Array<number>>) -> number {
+    return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+}
+
+def matrix_determinant_3x3(matrix: Array<Array<number>>) -> number {
+    return matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]) -
+           matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]) +
+           matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]);
+}
+
+# --- ۲۳. توابع با الگوی پردازش گراف ---
+def bfs<T>(graph: Object, start: T) -> Array<T> {
+    mut visited: Object = {};
+    mut queue: Array<T> = [start];
+    mut result: Array<T> = [];
+    
+    visited[start] = true;
+    
+    while (queue.length > 0) {
+        mut node: T = queue.shift();
+        result.push(node);
+        
+        for (neighbor in graph[node]) {
+            if (!visited[neighbor]) {
+                visited[neighbor] = true;
+                queue.push(neighbor);
+            }
+        }
+    }
+    
+    return result;
+}
+
+def dfs<T>(graph: Object, start: T) -> Array<T> {
+    mut visited: Object = {};
+    mut stack: Array<T> = [start];
+    mut result: Array<T> = [];
+    
+    while (stack.length > 0) {
+        mut node: T = stack.pop();
+        
+        if (!visited[node]) {
+            visited[node] = true;
+            result.push(node);
+            
+            for (neighbor in graph[node]) {
+                if (!visited[neighbor]) {
+                    stack.push(neighbor);
+                }
+            }
+        }
+    }
+    
+    return result;
+}
+
+def shortest_path<T>(graph: Object, start: T, end: T) -> Array<T> {
+    mut queue: Array<{ node: T, path: Array<T> }> = [{ node: start, path: [start] }];
+    mut visited: Object = {};
+    
+    while (queue.length > 0) {
+        mut current = queue.shift();
+        mut node: T = current.node;
+        mut path: Array<T> = current.path;
+        
+        if (node == end) {
+            return path;
+        }
+        
+        if (!visited[node]) {
+            visited[node] = true;
+            
+            for (neighbor in graph[node]) {
+                if (!visited[neighbor]) {
+                    queue.push({ node: neighbor, path: path + [neighbor] });
+                }
+            }
+        }
+    }
+    
+    return [];
+}
+
+# --- ۲۴. توابع با الگوی پردازش درخت ---
+class TreeNode<T> {
+    value: T;
+    left: TreeNode<T> | null;
+    right: TreeNode<T> | null;
+    
+    def __init__(value: T) {
+        self.value = value;
+        self.left = null;
+        self.right = null;
+    }
+}
+
+def tree_height<T>(root: TreeNode<T> | null) -> number {
+    if (root == null) {
+        return 0;
+    }
+    return 1 + max(tree_height(root.left), tree_height(root.right));
+}
+
+def tree_size<T>(root: TreeNode<T> | null) -> number {
+    if (root == null) {
+        return 0;
+    }
+    return 1 + tree_size(root.left) + tree_size(root.right);
+}
+
+def tree_sum<T>(root: TreeNode<T> | null) -> T {
+    if (root == null) {
+        return 0 as T;
+    }
+    return root.value + tree_sum(root.left) + tree_sum(root.right);
+}
+
+def tree_inorder<T>(root: TreeNode<T> | null) -> Array<T> {
+    if (root == null) {
+        return [];
+    }
+    return tree_inorder(root.left) + [root.value] + tree_inorder(root.right);
+}
+
+def tree_preorder<T>(root: TreeNode<T> | null) -> Array<T> {
+    if (root == null) {
+        return [];
+    }
+    return [root.value] + tree_preorder(root.left) + tree_preorder(root.right);
+}
+
+def tree_postorder<T>(root: TreeNode<T> | null) -> Array<T> {
+    if (root == null) {
+        return [];
+    }
+    return tree_postorder(root.left) + tree_postorder(root.right) + [root.value];
+}
+
+# --- ۲۵. توابع با الگوی پردازش مجموعه‌ها ---
+def set_union<T>(set1: Array<T>, set2: Array<T>) -> Array<T> {
+    mut result: Array<T> = set1.copy();
+    for (item in set2) {
+        if (!result.contains(item)) {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+def set_intersection<T>(set1: Array<T>, set2: Array<T>) -> Array<T> {
+    mut result: Array<T> = [];
+    for (item in set1) {
+        if (set2.contains(item) && !result.contains(item)) {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+def set_difference<T>(set1: Array<T>, set2: Array<T>) -> Array<T> {
+    mut result: Array<T> = [];
+    for (item in set1) {
+        if (!set2.contains(item)) {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+def set_symmetric_difference<T>(set1: Array<T>, set2: Array<T>) -> Array<T> {
+    return set_union(set_difference(set1, set2), set_difference(set2, set1));
+}
+
+def is_subset<T>(subset: Array<T>, superset: Array<T>) -> boolean {
+    for (item in subset) {
+        if (!superset.contains(item)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+def power_set<T>(set: Array<T>) -> Array<Array<T>> {
+    if (set.length == 0) {
+        return [[]];
+    }
+    
+    mut first: T = set[0];
+    mut rest: Array<T> = set.slice(1);
+    mut power_set_of_rest = power_set(rest);
+    
+    mut result: Array<Array<T>> = power_set_of_rest.copy();
+    
+    for (subset in power_set_of_rest) {
+        result.push([first] + subset);
+    }
+    
+    return result;
+}
+
+# --- ۲۶. توابع با الگوی پردازش احتمالات ---
+def factorial_iterative(n: number) -> number {
+    mut result: number = 1;
+    for (i in range(2, n + 1)) {
+        result = result * i;
+    }
+    return result;
+}
+
+def combination(n: number, r: number) -> number {
+    return factorial_iterative(n) / (factorial_iterative(r) * factorial_iterative(n - r));
+}
+
+def permutation(n: number, r: number) -> number {
+    return factorial_iterative(n) / factorial_iterative(n - r);
+}
+
+def binomial_coefficient(n: number, k: number) -> number {
+    if (k == 0 || k == n) {
+        return 1;
+    }
+    return binomial_coefficient(n - 1, k - 1) + binomial_coefficient(n - 1, k);
+}
+
+def pascal_triangle(rows: number) -> Array<Array<number>> {
+    mut result: Array<Array<number>> = [];
+    
+    for (i in range(rows)) {
+        mut row: Array<number> = [];
+        for (j in range(i + 1)) {
+            row.push(binomial_coefficient(i, j));
+        }
+        result.push(row);
+    }
+    
+    return result;
+}
+
+# --- ۲۷. توابع با الگوی پردازش آماری ---
+def mean(numbers: Array<number>) -> number {
+    return sum_array(numbers) / numbers.length;
+}
+
+def median(numbers: Array<number>) -> number {
+    mut sorted = sort_numbers_asc(numbers);
+    mut mid: number = sorted.length / 2;
+    
+    if (sorted.length % 2 == 0) {
+        return (sorted[mid - 1] + sorted[mid]) / 2;
+    } else {
+        return sorted[mid];
+    }
+}
+
+def mode(numbers: Array<number>) -> Array<number> {
+    mut frequency: Object = {};
+    mut max_freq: number = 0;
+    
+    for (num in numbers) {
+        if (frequency[num] == null) {
+            frequency[num] = 0;
+        }
+        frequency[num] = frequency[num] + 1;
+        if (frequency[num] > max_freq) {
+            max_freq = frequency[num];
+        }
+    }
+    
+    mut modes: Array<number> = [];
+    for (num in Object.keys(frequency)) {
+        if (frequency[num] == max_freq) {
+            modes.push(num.to_number());
+        }
+    }
+    
+    return modes;
+}
+
+def standard_deviation(numbers: Array<number>) -> number {
+    mut avg: number = mean(numbers);
+    mut variance: number = 0;
+    
+    for (num in numbers) {
+        variance = variance + (num - avg) ** 2;
+    }
+    
+    variance = variance / numbers.length;
+    return variance ** 0.5;
+}
+
+def correlation(x: Array<number>, y: Array<number>) -> number {
+    if (x.length != y.length) {
+        throw "Arrays must have the same length";
+    }
+    
+    mut n: number = x.length;
+    mut sum_x: number = sum_array(x);
+    mut sum_y: number = sum_array(y);
+    mut sum_xy: number = 0;
+    mut sum_x2: number = 0;
+    mut sum_y2: number = 0;
+    
+    for (i in range(n)) {
+        sum_xy = sum_xy + x[i] * y[i];
+        sum_x2 = sum_x2 + x[i] ** 2;
+        sum_y2 = sum_y2 + y[i] ** 2;
+    }
+    
+    mut numerator: number = n * sum_xy - sum_x * sum_y;
+    mut denominator: number = ((n * sum_x2 - sum_x ** 2) * (n * sum_y2 - sum_y ** 2)) ** 0.5;
+    
+    return numerator / denominator;
+}
+
+# --- ۲۸. توابع با الگوی پردازش رمزنگاری ---
+def caesar_cipher(text: string, shift: number) -> string {
+    mut result: string = "";
+    
+    for (char in text) {
+        if (char.is_letter()) {
+            mut base: number = char.is_uppercase() ? 65 : 97;
+            mut code: number = char.to_char_code();
+            result = result + String.from_char_code(((code - base + shift) % 26) + base);
+        } else {
+            result = result + char;
+        }
+    }
+    
+    return result;
+}
+
+def caesar_decipher(text: string, shift: number) -> string {
+    return caesar_cipher(text, 26 - (shift % 26));
+}
+
+def vigenere_cipher(text: string, key: string) -> string {
+    mut result: string = "";
+    mut key_index: number = 0;
+    
+    for (char in text) {
+        if (char.is_letter()) {
+            mut base: number = char.is_uppercase() ? 65 : 97;
+            mut shift: number = key[key_index % key.length].to_uppercase().to_char_code() - 65;
+            mut code: number = char.to_char_code();
+            result = result + String.from_char_code(((code - base + shift) % 26) + base);
+            key_index = key_index + 1;
+        } else {
+            result = result + char;
+        }
+    }
+    
+    return result;
+}
+
+def vigenere_decipher(text: string, key: string) -> string {
+    mut result: string = "";
+    mut key_index: number = 0;
+    
+    for (char in text) {
+        if (char.is_letter()) {
+            mut base: number = char.is_uppercase() ? 65 : 97;
+            mut shift: number = key[key_index % key.length].to_uppercase().to_char_code() - 65;
+            mut code: number = char.to_char_code();
+            result = result + String.from_char_code(((code - base - shift + 26) % 26) + base);
+            key_index = key_index + 1;
+        } else {
+            result = result + char;
+        }
+    }
+    
+    return result;
+}
+
+# --- ۲۹. توابع با الگوی پردازش فشرده‌سازی ---
+def run_length_encode(text: string) -> Array<(string, number)> {
+    if (text.length == 0) {
+        return [];
+    }
+    
+    mut result: Array<(string, number)> = [];
+    mut current_char: string = text[0];
+    mut count: number = 1;
+    
+    for (i in range(1, text.length)) {
+        if (text[i] == current_char) {
+            count = count + 1;
+        } else {
+            result.push((current_char, count));
+            current_char = text[i];
+            count = 1;
+        }
+    }
+    
+    result.push((current_char, count));
+    return result;
+}
+
+def run_length_decode(encoded: Array<(string, number)>) -> string {
+    mut result: string = "";
+    for (pair in encoded) {
+        mut char: string = pair[0];
+        mut count: number = pair[1];
+        for (i in range(count)) {
+            result = result + char;
+        }
+    }
+    return result;
+}
+
+def huffman_encode(text: string) -> Object {
+    # Simple frequency analysis
+    mut frequency: Object = {};
+    for (char in text) {
+        if (frequency[char] == null) {
+            frequency[char] = 0;
+        }
+        frequency[char] = frequency[char] + 1;
+    }
+    
+    # Sort by frequency
+    mut chars = Object.keys(frequency);
+    chars = quick_sort(chars, fn(a: string, b: string) -> number { return frequency[b] - frequency[a]; });
+    
+    # Assign codes (simple approach)
+    mut codes: Object = {};
+    for (i in range(chars.length)) {
+        codes[chars[i]] = i.to_string(2).pad_start(chars.length.to_string(2).length, "0");
+    }
+    
+    return { codes: codes, frequency: frequency };
+}
+
+# --- ۳۰. توابع با الگوی پردازش تصویر (ساده‌شده) ---
+def grayscale_filter(pixels: Array<Array<(number, number, number)>>) -> Array<Array<(number, number, number)>> {
+    mut result: Array<Array<(number, number, number)>> = [];
+    
+    for (row in pixels) {
+        mut new_row: Array<(number, number, number)> = [];
+        for (pixel in row) {
+            mut r: number = pixel[0];
+            mut g: number = pixel[1];
+            mut b: number = pixel[2];
+            mut gray: number = (r + g + b) / 3;
+            new_row.push((gray, gray, gray));
+        }
+        result.push(new_row);
+    }
+    
+    return result;
+}
+
+def brightness_filter(pixels: Array<Array<(number, number, number)>>, factor: number) -> Array<Array<(number, number, number)>> {
+    mut result: Array<Array<(number, number, number)>> = [];
+    
+    for (row in pixels) {
+        mut new_row: Array<(number, number, number)> = [];
+        for (pixel in row) {
+            mut r: number = min(255, max(0, pixel[0] * factor));
+            mut g: number = min(255, max(0, pixel[1] * factor));
+            mut b: number = min(255, max(0, pixel[2] * factor));
+            new_row.push((r, g, b));
+        }
+        result.push(new_row);
+    }
+    
+    return result;
+}
+
+def edge_detection(pixels: Array<Array<(number, number, number)>>) -> Array<Array<(number, number, number)>> {
+    mut result: Array<Array<(number, number, number)>> = [];
+    mut height: number = pixels.length;
+    mut width: number = pixels[0].length;
+    
+    for (i in range(height)) {
+        mut row: Array<(number, number, number)> = [];
+        for (j in range(width)) {
+            if (i == 0 || i == height - 1 || j == 0 || j == width - 1) {
+                row.push((0, 0, 0)); # Edge pixels are black
+            } else {
+                # Simple edge detection using gradient
+                mut gx: number = 0;
+                mut gy: number = 0;
+                
+                # Calculate gradients
+                gx = gx + pixels[i-1][j-1][0] * -1 + pixels[i-1][j+1][0] * 1;
+                gx = gx + pixels[i][j-1][0] * -2 + pixels[i][j+1][0] * 2;
+                gx = gx + pixels[i+1][j-1][0] * -1 + pixels[i+1][j+1][0] * 1;
+                
+                gy = gy + pixels[i-1][j-1][0] * -1 + pixels[i+1][j-1][0] * 1;
+                gy = gy + pixels[i-1][j][0] * -2 + pixels[i+1][j][0] * 2;
+                gy = gy + pixels[i-1][j+1][0] * -1 + pixels[i+1][j+1][0] * 1;
+                
+                mut magnitude: number = (gx ** 2 + gy ** 2) ** 0.5;
+                magnitude = min(255, max(0, magnitude));
+                
+                row.push((magnitude, magnitude, magnitude));
+            }
+        }
+        result.push(row);
+    }
+    
+    return result;
+}
+
+# --- ۳۱. توابع با الگوی پردازش صوت (ساده‌شده) ---
+def amplify_audio(samples: Array<number>, factor: number) -> Array<number> {
+    mut result: Array<number> = [];
+    for (sample in samples) {
+        result.push(min(1.0, max(-1.0, sample * factor)));
+    }
+    return result;
+}
+
+def echo_audio(samples: Array<number>, delay: number, decay: number) -> Array<number> {
+    mut result: Array<number> = samples.copy();
+    
+    for (i in range(samples.length)) {
+        if (i + delay < samples.length) {
+            result[i + delay] = result[i + delay] + samples[i] * decay;
+        }
+    }
+    
+    return result;
+}
+
+def low_pass_filter(samples: Array<number>, cutoff: number) -> Array<number> {
+    mut result: Array<number> = [];
+    mut alpha: number = cutoff / (cutoff + 1);
+    mut filtered: number = samples[0];
+    
+    for (sample in samples) {
+        filtered = alpha * sample + (1 - alpha) * filtered;
+        result.push(filtered);
+    }
+    
+    return result;
+}
+
+# --- ۳۲. توابع با الگوی پردازش شبکه ---
+def ip_to_number(ip: string) -> number {
+    mut parts = ip.split(".");
+    mut result: number = 0;
+    for (i in range(4)) {
+        result = result * 256 + parts[i].to_number();
+    }
+    return result;
+}
+
+def number_to_ip(num: number) -> string {
+    mut parts: Array<string> = [];
+    for (i in range(4)) {
+        parts.push((num % 256).to_string());
+        num = num / 256;
+    }
+    return parts.reverse().join(".");
+}
+
+def subnet_mask(cidr: number) -> string {
+    mut mask: number = 0;
+    for (i in range(cidr)) {
+        mask = mask | (1 << (31 - i));
+    }
+    return number_to_ip(mask);
+}
+
+def network_address(ip: string, cidr: number) -> string {
+    mut ip_num: number = ip_to_number(ip);
+    mut mask_num: number = ip_to_number(subnet_mask(cidr));
+    return number_to_ip(ip_num & mask_num);
+}
+
+def broadcast_address(ip: string, cidr: number) -> string {
+    mut ip_num: number = ip_to_number(ip);
+    mut mask_num: number = ip_to_number(subnet_mask(cidr));
+    mut network_num: number = ip_num & mask_num;
+    mut host_bits: number = 32 - cidr;
+    mut broadcast_num: number = network_num | ((1 << host_bits) - 1);
+    return number_to_ip(broadcast_num);
+}
+
+# --- ۳۳. توابع با الگوی پردازش مالی ---
+def compound_interest(principal: number, rate: number, time: number, compounds_per_year: number) -> number {
+    return principal * (1 + rate / compounds_per_year) ** (compounds_per_year * time);
+}
+
+def simple_interest(principal: number, rate: number, time: number) -> number {
+    return principal * rate * time;
+}
+
+def present_value(future_value: number, rate: number, time: number) -> number {
+    return future_value / (1 + rate) ** time;
+}
+
+def future_value(present_value: number, rate: number, time: number) -> number {
+    return present_value * (1 + rate) ** time;
+}
+
+def annuity_payment(principal: number, rate: number, periods: number) -> number {
+    return principal * rate / (1 - (1 + rate) ** (-periods));
+}
+
+def loan_amortization(principal: number, rate: number, periods: number) -> Array<Object> {
+    mut payment: number = annuity_payment(principal, rate, periods);
+    mut balance: number = principal;
+    mut schedule: Array<Object> = [];
+    
+    for (period in range(1, periods + 1)) {
+        mut interest: number = balance * rate;
+        mut principal_payment: number = payment - interest;
+        balance = balance - principal_payment;
+        
+        schedule.push({
+            period: period,
+            payment: payment,
+            interest: interest,
+            principal: principal_payment,
+            balance: max(0, balance)
+        });
+    }
+    
+    return schedule;
+}
+
+# --- ۳۴. توابع با الگوی پردازش علمی ---
+def newton_raphson(f: fn(number) -> number, df: fn(number) -> number, x0: number, tolerance: number, max_iterations: number) -> number {
+    mut x: number = x0;
+    mut iteration: number = 0;
+    
+    while (iteration < max_iterations) {
+        mut fx: number = f(x);
+        if (abs(fx) < tolerance) {
+            return x;
+        }
+        
+        mut dfx: number = df(x);
+        if (abs(dfx) < tolerance) {
+            throw "Derivative too small";
+        }
+        
+        x = x - fx / dfx;
+        iteration = iteration + 1;
+    }
+    
+    throw "Maximum iterations reached";
+}
+
+def trapezoidal_rule(f: fn(number) -> number, a: number, b: number, n: number) -> number {
+    mut h: number = (b - a) / n;
+    mut sum: number = (f(a) + f(b)) / 2;
+    
+    for (i in range(1, n)) {
+        sum = sum + f(a + i * h);
+    }
+    
+    return sum * h;
+}
+
+def simpsons_rule(f: fn(number) -> number, a: number, b: number, n: number) -> number {
+    if (n % 2 != 0) {
+        throw "n must be even for Simpson's rule";
+    }
+    
+    mut h: number = (b - a) / n;
+    mut sum: number = f(a) + f(b);
+    
+    for (i in range(1, n, 2)) {
+        sum = sum + 4 * f(a + i * h);
+    }
+    
+    for (i in range(2, n-1, 2)) {
+        sum = sum + 2 * f(a + i * h);
+    }
+    
+    return sum * h / 3;
+}
+
+def euler_method(f: fn(number, number) -> number, x0: number, y0: number, x_end: number, h: number) -> Array<(number, number)> {
+    mut x: number = x0;
+    mut y: number = y0;
+    mut result: Array<(number, number)> = [(x, y)];
+    
+    while (x < x_end) {
+        y = y + h * f(x, y);
+        x = x + h;
+        result.push((x, y));
+    }
+    
+    return result;
+}
+
+# --- ۳۵. توابع با الگوی پردازش ژنتیکی ---
+def dna_to_rna(dna: string) -> string {
+    mut rna: string = "";
+    for (base in dna) {
+        match base {
+            case "A" => rna = rna + "U";
+            case "T" => rna = rna + "A";
+            case "C" => rna = rna + "G";
+            case "G" => rna = rna + "C";
+            default => rna = rna + base;
+        }
+    }
+    return rna;
+}
+
+def rna_to_protein(rna: string) -> string {
+    mut codon_table: Object = {
+        "UUU": "F", "UUC": "F", "UUA": "L", "UUG": "L",
+        "UCU": "S", "UCC": "S", "UCA": "S", "UCG": "S",
+        "UAU": "Y", "UAC": "Y", "UAA": "*", "UAG": "*",
+        "UGU": "C", "UGC": "C", "UGA": "*", "UGG": "W",
+        "CUU": "L", "CUC": "L", "CUA": "L", "CUG": "L",
+        "CCU": "P", "CCC": "P", "CCA": "P", "CCG": "P",
+        "CAU": "H", "CAC": "H", "CAA": "Q", "CAG": "Q",
+        "CGU": "R", "CGC": "R", "CGA": "R", "CGG": "R",
+        "AUU": "I", "AUC": "I", "AUA": "I", "AUG": "M",
+        "ACU": "T", "ACC": "T", "ACA": "T", "ACG": "T",
+        "AAU": "N", "AAC": "N", "AAA": "K", "AAG": "K",
+        "AGU": "S", "AGC": "S", "AGA": "R", "AGG": "R",
+        "GUU": "V", "GUC": "V", "GUA": "V", "GUG": "V",
+        "GCU": "A", "GCC": "A", "GCA": "A", "GCG": "A",
+        "GAU": "D", "GAC": "D", "GAA": "E", "GAG": "E",
+        "GGU": "G", "GGC": "G", "GGA": "G", "GGG": "G"
+    };
+    
+    mut protein: string = "";
+    for (i in range(0, rna.length, 3)) {
+        if (i + 3 <= rna.length) {
+            mut codon: string = rna.substring(i, i + 3);
+            if (codon_table[codon] != null && codon_table[codon] != "*") {
+                protein = protein + codon_table[codon];
+            }
+        }
+    }
+    
+    return protein;
+}
+
+def hamming_distance(s1: string, s2: string) -> number {
+    if (s1.length != s2.length) {
+        throw "Strings must have equal length";
+    }
+    
+    mut distance: number = 0;
+    for (i in range(s1.length)) {
+        if (s1[i] != s2[i]) {
+            distance = distance + 1;
+        }
+    }
+    return distance;
+}
+
+def levenshtein_distance(s1: string, s2: string) -> number {
+    mut m: number = s1.length;
+    mut n: number = s2.length;
+    mut dp: Array<Array<number>> = [];
+    
+    for (i in range(m + 1)) {
+        mut row: Array<number> = [];
+        for (j in range(n + 1)) {
+            row.push(0);
+        }
+        dp.push(row);
+    }
+    
+    for (i in range(m + 1)) {
+        dp[i][0] = i;
+    }
+    
+    for (j in range(n + 1)) {
+        dp[0][j] = j;
+    }
+    
+    for (i in range(1, m + 1)) {
+        for (j in range(1, n + 1)) {
+            if (s1[i-1] == s2[j-1]) {
+                dp[i][j] = dp[i-1][j-1];
+            } else {
+                dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+            }
+        }
+    }
+    
+    return dp[m][n];
+}
+
+# --- ۳۶. توابع با الگوی پردازش بازی ---
+def minimax(board: Array<Array<string>>, depth: number, is_maximizing: boolean) -> number {
+    # Simple evaluation function for tic-tac-toe
+    mut winner: string = check_winner(board);
+    if (winner == "X") {
+        return 10 - depth;
+    } else if (winner == "O") {
+        return depth - 10;
+    } else if (is_board_full(board)) {
+        return 0;
+    }
+    
+    if (is_maximizing) {
+        mut best_score: number = -Infinity;
+        for (i in range(3)) {
+            for (j in range(3)) {
+                if (board[i][j] == "") {
+                    board[i][j] = "X";
+                    mut score: number = minimax(board, depth + 1, false);
+                    board[i][j] = "";
+                    best_score = max(score, best_score);
+                }
+            }
+        }
+        return best_score;
+    } else {
+        mut best_score: number = Infinity;
+        for (i in range(3)) {
+            for (j in range(3)) {
+                if (board[i][j] == "") {
+                    board[i][j] = "O";
+                    mut score: number = minimax(board, depth + 1, true);
+                    board[i][j] = "";
+                    best_score = min(score, best_score);
+                }
+            }
+        }
+        return best_score;
+    }
+}
+
+def get_best_move(board: Array<Array<string>>) -> (number, number) {
+    mut best_score: number = -Infinity;
+    mut best_move: (number, number) = (-1, -1);
+    
+    for (i in range(3)) {
+        for (j in range(3)) {
+            if (board[i][j] == "") {
+                board[i][j] = "X";
+                mut score: number = minimax(board, 0, false);
+                board[i][j] = "";
+                
+                if (score > best_score) {
+                    best_score = score;
+                    best_move = (i, j);
+                }
+            }
+        }
+    }
+    
+    return best_move;
+}
+
+def check_winner(board: Array<Array<string>>) -> string {
+    # Check rows
+    for (i in range(3)) {
+        if (board[i][0] == board[i][1] && board[i][1] == board[i][2] && board[i][0] != "") {
+            return board[i][0];
+        }
+    }
+    
+    # Check columns
+    for (j in range(3)) {
+        if (board[0][j] == board[1][j] && board[1][j] == board[2][j] && board[0][j] != "") {
+            return board[0][j];
+        }
+    }
+    
+    # Check diagonals
+    if (board[0][0] == board[1][1] && board[1][1] == board[2][2] && board[0][0] != "") {
+        return board[0][0];
+    }
+    if (board[0][2] == board[1][1] && board[1][1] == board[2][0] && board[0][2] != "") {
+        return board[0][2];
+    }
+    
+    return "";
+}
+
+def is_board_full(board: Array<Array<string>>) -> boolean {
+    for (i in range(3)) {
+        for (j in range(3)) {
+            if (board[i][j] == "") {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+# --- ۳۷. توابع با الگوی پردازش هوش مصنوعی ---
+def sigmoid(x: number) -> number {
+    return 1 / (1 + Math.exp(-x));
+}
+
+def sigmoid_derivative(x: number) -> number {
+    return x * (1 - x);
+}
+
+def relu(x: number) -> number {
+    return max(0, x);
+}
+
+def relu_derivative(x: number) -> number {
+    return x > 0 ? 1 : 0;
+}
+
+def softmax(inputs: Array<number>) -> Array<number> {
+    mut exp_sum: number = 0;
+    mut exp_values: Array<number> = [];
+    
+    for (input in inputs) {
+        mut exp_val: number = Math.exp(input);
+        exp_values.push(exp_val);
+        exp_sum = exp_sum + exp_val;
+    }
+    
+    mut result: Array<number> = [];
+    for (exp_val in exp_values) {
+        result.push(exp_val / exp_sum);
+    }
+    
+    return result;
+}
+
+def mean_squared_error(predictions: Array<number>, targets: Array<number>) -> number {
+    mut sum: number = 0;
+    for (i in range(predictions.length)) {
+        sum = sum + (predictions[i] - targets[i]) ** 2;
+    }
+    return sum / predictions.length;
+}
+
+def cross_entropy_loss(predictions: Array<number>, targets: Array<number>) -> number {
+    mut sum: number = 0;
+    for (i in range(predictions.length)) {
+        sum = sum - targets[i] * Math.log(predictions[i] + 1e-15);
+    }
+    return sum;
+}
+
+# --- ۳۸. توابع با الگوی پردازش یادگیری ماشین ---
+def linear_regression(x: Array<number>, y: Array<number>) -> Object {
+    mut n: number = x.length;
+    mut sum_x: number = sum_array(x);
+    mut sum_y: number = sum_array(y);
+    mut sum_xy: number = 0;
+    mut sum_x2: number = 0;
+    
+    for (i in range(n)) {
+        sum_xy = sum_xy + x[i] * y[i];
+        sum_x2 = sum_x2 + x[i] ** 2;
+    }
+    
+    mut slope: number = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2);
+    mut intercept: number = (sum_y - slope * sum_x) / n;
+    
+    return { slope: slope, intercept: intercept };
+}
+
+def predict_linear(model: Object, x: number) -> number {
+    return model.slope * x + model.intercept;
+}
+
+def k_nearest_neighbors(train_data: Array<Object>, train_labels: Array<string>, test_point: Object, k: number) -> string {
+    mut distances: Array<(number, string)> = [];
+    
+    for (i in range(train_data.length)) {
+        mut distance: number = 0;
+        for (key in Object.keys(test_point)) {
+            distance = distance + (train_data[i][key] - test_point[key]) ** 2;
+        }
+        distance = distance ** 0.5;
+        distances.push((distance, train_labels[i]));
+    }
+    
+    distances = quick_sort(distances, fn(a: (number, string), b: (number, string)) -> number { return a[0] - b[0]; });
+    
+    mut votes: Object = {};
+    for (i in range(k)) {
+        mut label: string = distances[i][1];
+        if (votes[label] == null) {
+            votes[label] = 0;
+        }
+        votes[label] = votes[label] + 1;
+    }
+    
+    mut best_label: string = "";
+    mut max_votes: number = 0;
+    for (label in Object.keys(votes)) {
+        if (votes[label] > max_votes) {
+            max_votes = votes[label];
+            best_label = label;
+        }
+    }
+    
+    return best_label;
+}
+
+# --- ۳۹. توابع با الگوی پردازش داده‌های بزرگ ---
+def chunk_array<T>(arr: Array<T>, chunk_size: number) -> Array<Array<T>> {
+    mut result: Array<Array<T>> = [];
+    for (i in range(0, arr.length, chunk_size)) {
+        result.push(arr.slice(i, i + chunk_size));
+    }
+    return result;
+}
+
+def parallel_map<T, U>(arr: Array<T>, func: fn(T) -> U, chunk_size: number = 1000) -> Array<U> {
+    mut chunks = chunk_array(arr, chunk_size);
+    mut results: Array<U> = [];
+    
+    for (chunk in chunks) {
+        mut chunk_result = map(chunk, func);
+        results = results + chunk_result;
+    }
+    
+    return results;
+}
+
+def parallel_reduce<T, U>(arr: Array<T>, initial: U, reducer: fn(U, T) -> U, chunk_size: number = 1000) -> U {
+    mut chunks = chunk_array(arr, chunk_size);
+    mut partial_results: Array<U> = [];
+    
+    for (chunk in chunks) {
+        partial_results.push(reduce(chunk, initial, reducer));
+    }
+    
+    return reduce(partial_results, initial, reducer);
+}
+
+def streaming_sum(numbers: Array<number>) -> number {
+    mut sum: number = 0;
+    for (num in numbers) {
+        sum = sum + num;
+    }
+    return sum;
+}
+
+def streaming_average(numbers: Array<number>) -> number {
+    mut sum: number = 0;
+    mut count: number = 0;
+    
+    for (num in numbers) {
+        sum = sum + num;
+        count = count + 1;
+    }
+    
+    return sum / count;
+}
+
+def streaming_min_max(numbers: Array<number>) -> Object {
+    mut min_val: number = Infinity;
+    mut max_val: number = -Infinity;
+    
+    for (num in numbers) {
+        min_val = min(min_val, num);
+        max_val = max(max_val, num);
+    }
+    
+    return { min: min_val, max: max_val };
+}
+
+# --- ۴۰. توابع با الگوی پردازش رشته‌های پیچیده ---
+def longest_common_subsequence(s1: string, s2: string) -> string {
+    mut m: number = s1.length;
+    mut n: number = s2.length;
+    mut dp: Array<Array<number>> = [];
+    
+    for (i in range(m + 1)) {
+        mut row: Array<number> = [];
+        for (j in range(n + 1)) {
+            row.push(0);
+        }
+        dp.push(row);
+    }
+    
+    for (i in range(1, m + 1)) {
+        for (j in range(1, n + 1)) {
+            if (s1[i-1] == s2[j-1]) {
+                dp[i][j] = dp[i-1][j-1] + 1;
+            } else {
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1]);
+            }
+        }
+    }
+    
+    # Reconstruct LCS
+    mut lcs: string = "";
+    mut i: number = m;
+    mut j: number = n;
+    
+    while (i > 0 && j > 0) {
+        if (s1[i-1] == s2[j-1]) {
+            lcs = s1[i-1] + lcs;
+            i = i - 1;
+            j = j - 1;
+        } else if (dp[i-1][j] > dp[i][j-1]) {
+            i = i - 1;
+        } else {
+            j = j - 1;
+        }
+    }
+    
+    return lcs;
+}
+
+def longest_palindromic_substring(s: string) -> string {
+    if (s.length < 2) {
+        return s;
+    }
+    
+    mut start: number = 0;
+    mut max_len: number = 1;
+    
+    def expand_around_center(left: number, right: number) {
+        while (left >= 0 && right < s.length && s[left] == s[right]) {
+            left = left - 1;
+            right = right + 1;
+        }
+        return right - left - 1;
+    }
+    
+    for (i in range(s.length)) {
+        mut len1: number = expand_around_center(i, i);
+        mut len2: number = expand_around_center(i, i + 1);
+        mut len: number = max(len1, len2);
+        
+        if (len > max_len) {
+            max_len = len;
+            start = i - (len - 1) / 2;
+        }
+    }
+    
+    return s.substring(start, start + max_len);
+}
+
+def edit_distance(s1: string, s2: string) -> number {
+    mut m: number = s1.length;
+    mut n: number = s2.length;
+    mut dp: Array<Array<number>> = [];
+    
+    for (i in range(m + 1)) {
+        mut row: Array<number> = [];
+        for (j in range(n + 1)) {
+            row.push(0);
+        }
+        dp.push(row);
+    }
+    
+    for (i in range(m + 1)) {
+        dp[i][0] = i;
+    }
+    
+    for (j in range(n + 1)) {
+        dp[0][j] = j;
+    }
+    
+    for (i in range(1, m + 1)) {
+        for (j in range(1, n + 1)) {
+            if (s1[i-1] == s2[j-1]) {
+                dp[i][j] = dp[i-1][j-1];
+            } else {
+                dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+            }
+        }
+    }
+    
+    return dp[m][n];
+}
+
+# --- ۴۱. توابع با الگوی پردازش الگوریتم‌های پیشرفته ---
+def dijkstra(graph: Object, start: string) -> Object {
+    mut distances: Object = {};
+    mut visited: Object = {};
+    mut previous: Object = {};
+    
+    for (node in Object.keys(graph)) {
+        distances[node] = Infinity;
+        visited[node] = false;
+        previous[node] = null;
+    }
+    
+    distances[start] = 0;
+    
+    while (true) {
+        mut min_distance: number = Infinity;
+        mut min_node: string = "";
+        
+        for (node in Object.keys(graph)) {
+            if (!visited[node] && distances[node] < min_distance) {
+                min_distance = distances[node];
+                min_node = node;
+            }
+        }
+        
+        if (min_distance == Infinity) {
+            break;
+        }
+        
+        visited[min_node] = true;
+        
+        for (neighbor in Object.keys(graph[min_node])) {
+            mut distance: number = distances[min_node] + graph[min_node][neighbor];
+            if (distance < distances[neighbor]) {
+                distances[neighbor] = distance;
+                previous[neighbor] = min_node;
+            }
+        }
+    }
+    
+    return { distances: distances, previous: previous };
+}
+
+def a_star(graph: Object, start: string, goal: string, heuristic: fn(string, string) -> number) -> Array<string> {
+    mut open_set: Array<string> = [start];
+    mut came_from: Object = {};
+    mut g_score: Object = {};
+    mut f_score: Object = {};
+    
+    for (node in Object.keys(graph)) {
+        g_score[node] = Infinity;
+        f_score[node] = Infinity;
+    }
+    
+    g_score[start] = 0;
+    f_score[start] = heuristic(start, goal);
+    
+    while (open_set.length > 0) {
+        mut current: string = "";
+        mut min_f: number = Infinity;
+        
+        for (node in open_set) {
+            if (f_score[node] < min_f) {
+                min_f = f_score[node];
+                current = node;
+            }
+        }
+        
+        if (current == goal) {
+            mut path: Array<string> = [current];
+            while (current in came_from) {
+                current = came_from[current];
+                path.unshift(current);
+            }
+            return path;
+        }
+        
+        open_set = open_set.filter(fn(n: string) -> boolean { return n != current; });
+        
+        for (neighbor in Object.keys(graph[current])) {
+            mut tentative_g_score: number = g_score[current] + graph[current][neighbor];
+            
+            if (tentative_g_score < g_score[neighbor]) {
+                came_from[neighbor] = current;
+                g_score[neighbor] = tentative_g_score;
+                f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, goal);
+                
+                if (!open_set.contains(neighbor)) {
+                    open_set.push(neighbor);
+                }
+            }
+        }
+    }
+    
+    return [];
+}
+
+def knapsack_01(weights: Array<number>, values: Array<number>, capacity: number) -> number {
+    mut n: number = weights.length;
+    mut dp: Array<Array<number>> = [];
+    
+    for (i in range(n + 1)) {
+        mut row: Array<number> = [];
+        for (w in range(capacity + 1)) {
+            row.push(0);
+        }
+        dp.push(row);
+    }
+    
+    for (i in range(1, n + 1)) {
+        for (w in range(1, capacity + 1)) {
+            if (weights[i-1] <= w) {
+                dp[i][w] = max(values[i-1] + dp[i-1][w-weights[i-1]], dp[i-1][w]);
+            } else {
+                dp[i][w] = dp[i-1][w];
+            }
+        }
+    }
+    
+    return dp[n][capacity];
+}
+
+def knapsack_01_items(weights: Array<number>, values: Array<number>, capacity: number) -> Array<number> {
+    mut n: number = weights.length;
+    mut dp: Array<Array<number>> = [];
+    
+    for (i in range(n + 1)) {
+        mut row: Array<number> = [];
+        for (w in range(capacity + 1)) {
+            row.push(0);
+        }
+        dp.push(row);
+    }
+    
+    for (i in range(1, n + 1)) {
+        for (w in range(1, capacity + 1)) {
+            if (weights[i-1] <= w) {
+                dp[i][w] = max(values[i-1] + dp[i-1][w-weights[i-1]], dp[i-1][w]);
+            } else {
+                dp[i][w] = dp[i-1][w];
+            }
+        }
+    }
+    
+    # Reconstruct solution
+    mut result: Array<number> = [];
+    mut w: number = capacity;
+    
+    for (i in range(n, 0, -1)) {
+        if (dp[i][w] != dp[i-1][w]) {
+            result.push(i-1);
+            w = w - weights[i-1];
+        }
+    }
+    
+    return result.reverse();
+}
+
+# --- ۴۲. توابع با الگوی پردازش الگوریتم‌های ژنتیک ---
+def genetic_algorithm(fitness_func: fn(Array<number>) -> number, population_size: number, chromosome_length: number, mutation_rate: number, generations: number) -> Array<number> {
+    def create_individual() -> Array<number> {
+        mut individual: Array<number> = [];
+        for (i in range(chromosome_length)) {
+            individual.push(Math.random());
+        }
+        return individual;
+    }
+    
+    def create_population() -> Array<Array<number>> {
+        mut population: Array<Array<number>> = [];
+        for (i in range(population_size)) {
+            population.push(create_individual());
+        }
+        return population;
+    }
+    
+    def selection(population: Array<Array<number>>) -> Array<Array<number>> {
+        mut fitnesses: Array<number> = [];
+        for (individual in population) {
+            fitnesses.push(fitness_func(individual));
+        }
+        
+        # Roulette wheel selection
+        mut total_fitness: number = sum_array(fitnesses);
+        mut new_population: Array<Array<number>> = [];
+        
+        for (i in range(population_size)) {
+            mut r: number = Math.random() * total_fitness;
+            mut sum: number = 0;
+            for (j in range(population_size)) {
+                sum = sum + fitnesses[j];
+                if (sum >= r) {
+                    new_population.push(population[j]);
+                    break;
+                }
+            }
+        }
+        
+        return new_population;
+    }
+    
+    def crossover(parent1: Array<number>, parent2: Array<number>) -> Array<Array<number>> {
+        mut crossover_point: number = Math.floor(Math.random() * chromosome_length);
+        mut child1: Array<number> = parent1.slice(0, crossover_point) + parent2.slice(crossover_point);
+        mut child2: Array<number> = parent2.slice(0, crossover_point) + parent1.slice(crossover_point);
+        return [child1, child2];
+    }
+    
+    def mutate(individual: Array<number>) -> Array<number> {
+        for (i in range(chromosome_length)) {
+            if (Math.random() < mutation_rate) {
+                individual[i] = Math.random();
+            }
+        }
+        return individual;
+    }
+    
+    mut population = create_population();
+    
+    for (generation in range(generations)) {
+        population = selection(population);
+        
+        mut new_population: Array<Array<number>> = [];
+        for (i in range(0, population_size, 2)) {
+            if (i + 1 < population_size) {
+                mut children = crossover(population[i], population[i+1]);
+                new_population.push(mutate(children[0]));
+                new_population.push(mutate(children[1]));
+            } else {
+                new_population.push(mutate(population[i]));
+            }
+        }
+        
+        population = new_population;
+    }
+    
+    # Return best individual
+    mut best_fitness: number = -Infinity;
+    mut best_individual: Array<number> = [];
+    
+    for (individual in population) {
+        mut fitness: number = fitness_func(individual);
+        if (fitness > best_fitness) {
+            best_fitness = fitness;
+            best_individual = individual;
+        }
+    }
+    
+    return best_individual;
+}
+
+# --- ۴۳. توابع با الگوی پردازش شبکه عصبی ---
+class NeuralNetwork {
+    weights: Array<Array<Array<number>>>;
+    biases: Array<Array<Array<number>>>;
+    activations: Array<string>;
+    
+    def __init__(layer_sizes: Array<number>, activations: Array<string>) {
+        self.weights = [];
+        self.biases = [];
+        self.activations = activations;
+        
+        for (i in range(layer_sizes.length - 1)) {
+            mut w: Array<Array<number>> = [];
+            for (j in range(layer_sizes[i+1])) {
+                mut row: Array<number> = [];
+                for (k in range(layer_sizes[i])) {
+                    row.push((Math.random() - 0.5) * 2);
+                }
+                w.push(row);
+            }
+            self.weights.push(w);
+            
+            mut b: Array<Array<number>> = [];
+            for (j in range(layer_sizes[i+1])) {
+                b.push([0]);
+            }
+            self.biases.push(b);
+        }
+    }
+    
+    def forward(input: Array<number>) -> Array<number> {
+        mut current: Array<number> = input;
+        
+        for (i in range(self.weights.length)) {
+            mut z: Array<number> = [];
+            for (j in range(self.weights[i].length)) {
+                mut sum: number = self.biases[i][j][0];
+                for (k in range(self.weights[i][j].length)) {
+                    sum = sum + self.weights[i][j][k] * current[k];
+                }
+                z.push(sum);
+            }
+            
+            current = self.activate(z, self.activations[i]);
+        }
+        
+        return current;
+    }
+    
+    def activate(values: Array<number>, activation: string) -> Array<number> {
+        match activation {
+            case "sigmoid" => {
+                return map(values, fn(x: number) -> number { return 1 / (1 + Math.exp(-x)); });
+            }
+            case "relu" => {
+                return map(values, fn(x: number) -> number { return max(0, x); });
+            }
+            case "tanh" => {
+                return map(values, fn(x: number) -> number { return Math.tanh(x); });
+            }
+            default => {
+                return values;
+            }
+        }
+    }
+    
+    def train(inputs: Array<Array<number>>, targets: Array<Array<number>>, learning_rate: number, epochs: number) {
+        for (epoch in range(epochs)) {
+            for (i in range(inputs.length)) {
+                # Forward pass
+                mut outputs = self.forward(inputs[i]);
+                
+                # Calculate error
+                mut errors: Array<number> = [];
+                for (j in range(targets[i].length)) {
+                    errors.push(targets[i][j] - outputs[j]);
+                }
+                
+                # Backward pass (simplified)
+                # This is a very basic implementation
+                for (layer in range(self.weights.length - 1, -1, -1)) {
+                    # Update weights and biases
+                    # Simplified gradient descent
+                    for (j in range(self.weights[layer].length)) {
+                        for (k in range(self.weights[layer][j].length)) {
+                            self.weights[layer][j][k] = self.weights[layer][j][k] + learning_rate * errors[j] * inputs[i][k];
+                        }
+                        self.biases[layer][j][0] = self.biases[layer][j][0] + learning_rate * errors[j];
+                    }
+                }
+            }
+        }
+    }
+}
+
+# --- ۴۴. توابع با الگوی پردازش رمزنگاری پیشرفته ---
+def rsa_generate_key_pair(p: number, q: number) -> Object {
+    mut n: number = p * q;
+    mut phi: number = (p - 1) * (q - 1);
+    
+    # Choose e such that 1 < e < phi and gcd(e, phi) = 1
+    mut e: number = 65537; # Common choice
+    
+    # Calculate d such that d * e ≡ 1 (mod phi)
+    mut d: number = mod_inverse(e, phi);
+    
+    return {
+        public_key: { e: e, n: n },
+        private_key: { d: d, n: n }
+    };
+}
+
+def mod_inverse(a: number, m: number) -> number {
+    mut m0: number = m;
+    mut y: number = 0;
+    mut x: number = 1;
+    
+    if (m == 1) {
+        return 0;
+    }
+    
+    while (a > 1) {
+        mut q: number = a / m;
+        mut t: number = m;
+        
+        m = a % m;
+        a = t;
+        t = y;
+        
+        y = x - q * y;
+        x = t;
+    }
+    
+    if (x < 0) {
+        x = x + m0;
+    }
+    
+    return x;
+}
+
+def rsa_encrypt(message: string, public_key: Object) -> Array<number> {
+    mut encrypted: Array<number> = [];
+    for (char in message) {
+        mut char_code: number = char.to_char_code();
+        encrypted.push(mod_pow(char_code, public_key.e, public_key.n));
+    }
+    return encrypted;
+}
+
+def rsa_decrypt(encrypted: Array<number>, private_key: Object) -> string {
+    mut decrypted: string = "";
+    for (num in encrypted) {
+        mut char_code: number = mod_pow(num, private_key.d, private_key.n);
+        decrypted = decrypted + String.from_char_code(char_code);
+    }
+    return decrypted;
+}
+
+def mod_pow(base: number, exponent: number, modulus: number) -> number {
+    mut result: number = 1;
+    base = base % modulus;
+    
+    while (exponent > 0) {
+        if (exponent % 2 == 1) {
+            result = (result * base) % modulus;
+        }
+        exponent = exponent >> 1;
+        base = (base * base) % modulus;
+    }
+    
+    return result;
+}
+
+# --- ۴۵. توابع با الگوی پردازش داده‌های زمان واقعی ---
+def moving_average(data: Array<number>, window_size: number) -> Array<number> {
+    mut result: Array<number> = [];
+    
+    for (i in range(window_size - 1, data.length)) {
+        mut sum: number = 0;
+        for (j in range(i - window_size + 1, i + 1)) {
+            sum = sum + data[j];
+        }
+        result.push(sum / window_size);
+    }
+    
+    return result;
+}
+
+def exponential_moving_average(data: Array<number>, alpha: number) -> Array<number> {
+    mut result: Array<number> = [data[0]];
+    
+    for (i in range(1, data.length)) {
+        result.push(alpha * data[i] + (1 - alpha) * result[i-1]);
+    }
+    
+    return result;
+}
+
+def real_time_anomaly_detection(data: Array<number>, threshold: number) -> Array<number> {
+    mut anomalies: Array<number> = [];
+    mut mean: number = 0;
+    mut variance: number = 0;
+    mut count: number = 0;
+    
+    for (i in range(data.length)) {
+        count = count + 1;
+        
+        # Update mean and variance
+        mut old_mean: number = mean;
+        mean = mean + (data[i] - mean) / count;
+        variance = variance + (data[i] - old_mean) * (data[i] - mean);
+        
+        if (count > 1) {
+            mut std_dev: number = (variance / (count - 1)) ** 0.5;
+            mut z_score: number = abs(data[i] - mean) / std_dev;
+            
+            if (z_score > threshold) {
+                anomalies.push(i);
+            }
+        }
+    }
+    
+    return anomalies;
+}
+
+def sliding_window_aggregation(data: Array<number>, window_size: number, aggregation_func: fn(Array<number>) -> number) -> Array<number> {
+    mut result: Array<number> = [];
+    
+    for (i in range(window_size - 1, data.length)) {
+        mut window: Array<number> = data.slice(i - window_size + 1, i + 1);
+        result.push(aggregation_func(window));
+    }
+    
+    return result;
+}
+
+# --- ۴۶. توابع با الگوی پردازش داده‌های مکانی ---
+def haversine_distance(lat1: number, lon1: number, lat2: number, lon2: number) -> number {
+    mut R: number = 6371; # Earth's radius in kilometers
+    mut dLat: number = (lat2 - lat1) * Math.PI / 180;
+    mut dLon: number = (lon2 - lon1) * Math.PI / 180;
+    mut a: number = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+    mut c: number = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+def nearest_neighbor(points: Array<(number, number)>, query_point: (number, number)) -> (number, number) {
+    mut min_distance: number = Infinity;
+    mut nearest: (number, number) = points[0];
+    
+    for (point in points) {
+        mut distance: number = haversine_distance(query_point[0], query_point[1], point[0], point[1]);
+        if (distance < min_distance) {
+            min_distance = distance;
+            nearest = point;
+        }
+    }
+    
+    return nearest;
+}
+
+def k_nearest_neighbors_spatial(points: Array<(number, number)>, query_point: (number, number), k: number) -> Array<(number, number)> {
+    mut distances: Array<(number, (number, number))> = [];
+    
+    for (point in points) {
+        mut distance: number = haversine_distance(query_point[0], query_point[1], point[0], point[1]);
+        distances.push((distance, point));
+    }
+    
+    distances = quick_sort(distances, fn(a: (number, (number, number)), b: (number, (number, number))) -> number { return a[0] - b[0]; });
+    
+    mut result: Array<(number, number)> = [];
+    for (i in range(min(k, distances.length))) {
+        result.push(distances[i][1]);
+    }
+    
+    return result;
+}
+
+def bounding_box(points: Array<(number, number)>) -> Object {
+    mut min_lat: number = Infinity;
+    mut max_lat: number = -Infinity;
+    mut min_lon: number = Infinity;
+    mut max_lon: number = -Infinity;
+    
+    for (point in points) {
+        min_lat = min(min_lat, point[0]);
+        max_lat = max(max_lat, point[0]);
+        min_lon = min(min_lon, point[1]);
+        max_lon = max(max_lon, point[1]);
+    }
+    
+    return {
+        min_lat: min_lat,
+        max_lat: max_lat,
+        min_lon: min_lon,
+        max_lon: max_lon
+    };
+}
+
+# --- ۴۷. توابع با الگوی پردازش داده‌های مالی پیشرفته ---
+def black_scholes_call(S: number, K: number, T: number, r: number, sigma: number) -> number {
+    mut d1: number = (Math.log(S/K) + (r + sigma*sigma/2)*T) / (sigma * Math.sqrt(T));
+    mut d2: number = d1 - sigma * Math.sqrt(T);
+    
+    return S * normal_cdf(d1) - K * Math.exp(-r*T) * normal_cdf(d2);
+}
+
+def black_scholes_put(S: number, K: number, T: number, r: number, sigma: number) -> number {
+    mut d1: number = (Math.log(S/K) + (r + sigma*sigma/2)*T) / (sigma * Math.sqrt(T));
+    mut d2: number = d1 - sigma * Math.sqrt(T);
+    
+    return K * Math.exp(-r*T) * normal_cdf(-d2) - S * normal_cdf(-d1);
+}
+
+def normal_cdf(x: number) -> number {
+    # Approximation of the cumulative distribution function
+    mut t: number = 1 / (1 + 0.2316419 * abs(x));
+    mut d: number = 0.3989423 * Math.exp(-x * x / 2);
+    mut prob: number = d * t * (0.3193815 + t * (-0.3565638 + t * (1.7814779 + t * (-1.821256 + t * 1.3302744))));
+    
+    if (x > 0) {
+        prob = 1 - prob;
+    }
+    
+    return prob;
+}
+
+def monte_carlo_simulation(S0: number, mu: number, sigma: number, T: number, steps: number, simulations: number) -> Array<number> {
+    mut dt: number = T / steps;
+    mut results: Array<number> = [];
+    
+    for (i in range(simulations)) {
+        mut S: number = S0;
+        for (j in range(steps)) {
+            mut z: number = random_normal();
+            S = S * Math.exp((mu - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * z);
+        }
+        results.push(S);
+    }
+    
+    return results;
+}
+
+def random_normal() -> number {
+    # Box-Muller transform
+    mut u: number = 1 - Math.random();
+    mut v: number = 1 - Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+def value_at_risk(returns: Array<number>, confidence_level: number) -> number {
+    mut sorted_returns = sort_numbers_asc(returns);
+    mut index: number = Math.ceil(sorted_returns.length * (1 - confidence_level));
+    return sorted_returns[index];
+}
+
+def sharpe_ratio(returns: Array<number>, risk_free_rate: number) -> number {
+    mut mean_return: number = mean(returns) - risk_free_rate;
+    mut std_dev: number = standard_deviation(returns);
+    return mean_return / std_dev;
+}
+
+# --- ۴۸. توابع با الگوی پردازش داده‌های اجتماعی ---
+def sentiment_analysis(text: string) -> Object {
+    mut positive_words: Array<string> = ["good", "great", "excellent", "amazing", "wonderful", "fantastic", "awesome"];
+    mut negative_words: Array<string> = ["bad", "terrible", "awful", "horrible", "disappointing", "sad", "angry"];
+    
+    mut words = extract_words(text);
+    mut positive_count: number = 0;
+    mut negative_count: number = 0;
+    
+    for (word in words) {
+        if (positive_words.contains(word)) {
+            positive_count = positive_count + 1;
+        } else if (negative_words.contains(word)) {
+            negative_count = negative_count + 1;
+        }
+    }
+    
+    mut score: number = positive_count - negative_count;
+    mut sentiment: string = "";
+    
+    if (score > 0) {
+        sentiment = "positive";
+    } else if (score < 0) {
+        sentiment = "negative";
+    } else {
+        sentiment = "neutral";
+    }
+    
+    return {
+        score: score,
+        sentiment: sentiment,
+        positive_count: positive_count,
+        negative_count: negative_count
+    };
+}
+
+def social_network_analysis(graph: Object) -> Object {
+    mut centrality: Object = {};
+    mut total_nodes: number = Object.keys(graph).length;
+    
+    # Degree centrality
+    for (node in Object.keys(graph)) {
+        centrality[node] = graph[node].length / (total_nodes - 1);
+    }
+    
+    # Betweenness centrality (simplified)
+    mut betweenness: Object = {};
+    for (node in Object.keys(graph)) {
+        betweenness[node] = 0;
+    }
+    
+    for (source in Object.keys(graph)) {
+        for (target in Object.keys(graph)) {
+            if (source != target) {
+                mut path = shortest_path(graph, source, target);
+                for (intermediate in path.slice(1, -1)) {
+                    betweenness[intermediate] = betweenness[intermediate] + 1;
+                }
+            }
+        }
+    }
+    
+    # Normalize betweenness
+    mut max_betweenness: number = max_array(Object.values(betweenness));
+    for (node in Object.keys(betweenness)) {
+        betweenness[node] = betweenness[node] / max_betweenness;
+    }
+    
+    return {
+        degree_centrality: centrality,
+        betweenness_centrality: betweenness
+    };
+}
+
+def community_detection(graph: Object) -> Array<Array<string>> {
+    mut communities: Array<Array<string>> = [];
+    mut visited: Object = {};
+    
+    for (node in Object.keys(graph)) {
+        if (!visited[node]) {
+            mut community: Array<string> = bfs(graph, node);
+            communities.push(community);
+            for (member in community) {
+                visited[member] = true;
+            }
+        }
+    }
+    
+    return communities;
+}
+
+def influence_score(graph: Object, node: string) -> number {
+    mut followers: number = graph[node].length;
+    mut following: number = 0;
+    
+    for (other_node in Object.keys(graph)) {
+        if (graph[other_node].contains(node)) {
+            following = following + 1;
+        }
+    }
+    
+    # Simple influence score: followers / following
+    return following == 0 ? 0 : followers / following;
+}
+
+# --- ۴۹. توابع با الگوی پردازش داده‌های سلامت ---
+def calculate_bmi(weight: number, height: number) -> number {
+    return weight / (height ** 2);
+}
+
+def bmi_category(bmi: number) -> string {
+    if (bmi < 18.5) {
+        return "Underweight";
+    } else if (bmi < 25) {
+        return "Normal weight";
+    } else if (bmi < 30) {
+        return "Overweight";
+    } else {
+        return "Obese";
+    }
+}
+
+def heart_rate_zones(max_hr: number) -> Object {
+    return {
+        zone1: { min: max_hr * 0.5, max: max_hr * 0.6, name: "Very Light" },
+        zone2: { min: max_hr * 0.6, max: max_hr * 0.7, name: "Light" },
+        zone3: { min: max_hr * 0.7, max: max_hr * 0.8, name: "Moderate" },
+        zone4: { min: max_hr * 0.8, max: max_hr * 0.9, name: "Hard" },
+        zone5: { min: max_hr * 0.9, max: max_hr, name: "Maximum" }
+    };
+}
+
+def calories_burned(weight: number, duration: number, intensity: string) -> number {
+    mut met_values: Object = {
+        "sedentary": 1.0,
+        "light": 2.5,
+        "moderate": 5.0,
+        "hard": 7.5,
+        "very_hard": 10.0
+    };
+    
+    mut met: number = met_values[intensity] || 1.0;
+    return met * weight * duration / 60;
+}
+
+def sleep_quality_score(sleep_data: Object) -> number {
+    mut score: number = 0;
+    
+    # Duration score (7-9 hours is optimal)
+    mut duration: number = sleep_data.duration;
+    if (duration >= 7 && duration <= 9) {
+        score = score + 25;
+    } else if (duration >= 6 && duration < 7) {
+        score = score + 20;
+    } else if (duration > 9 && duration <= 10) {
+        score = score + 20;
+    } else if (duration >= 5 && duration < 6) {
+        score = score + 15;
+    } else if (duration > 10) {
+        score = score + 10;
+    }
+    
+    # Sleep efficiency score (percentage of time in bed spent sleeping)
+    mut efficiency: number = sleep_data.efficiency;
+    if (efficiency >= 90) {
+        score = score + 25;
+    } else if (efficiency >= 85) {
+        score = score + 20;
+    } else if (efficiency >= 80) {
+        score = score + 15;
+    } else if (efficiency >= 75) {
+        score = score + 10;
+    }
+    
+    # Deep sleep score (20-25% of total sleep is optimal)
+    mut deep_sleep: number = sleep_data.deep_sleep_percentage;
+    if (deep_sleep >= 20 && deep_sleep <= 25) {
+        score = score + 25;
+    } else if (deep_sleep >= 15 && deep_sleep < 20) {
+        score = score + 20;
+    } else if (deep_sleep > 25 && deep_sleep <= 30) {
+        score = score + 20;
+    } else if (deep_sleep >= 10 && deep_sleep < 15) {
+        score = score + 15;
+    }
+    
+    # REM sleep score (20-25% of total sleep is optimal)
+    mut rem_sleep: number = sleep_data.rem_sleep_percentage;
+    if (rem_sleep >= 20 && rem_sleep <= 25) {
+        score = score + 25;
+    } else if (rem_sleep >= 15 && rem_sleep < 20) {
+        score = score + 20;
+    } else if (rem_sleep > 25 && rem_sleep <= 30) {
+        score = score + 20;
+    } else if (rem_sleep >= 10 && rem_sleep < 15) {
+        score = score + 15;
+    }
+    
+    return score;
+}
+
+# --- ۵۰. توابع با الگوی پردازش داده‌های محیطی ---
+def air_quality_index(pm25: number, pm10: number, o3: number, no2: number, so2: number, co: number) -> Object {
+    def calculate_subindex(concentration: number, breakpoints: Array<Object>) -> number {
+        for (bp in breakpoints) {
+            if (concentration >= bp.min && concentration <= bp.max) {
+                mut i_low: number = bp.i_low;
+                mut i_high: number = bp.i_high;
+                mut c_low: number = bp.c_low;
+                mut c_high: number = bp.c_high;
+                return ((i_high - i_low) / (c_high - c_low)) * (concentration - c_low) + i_low;
+            }
+        }
+        return 0;
+    }
+    
+    # PM2.5 breakpoints (μg/m³)
+    mut pm25_breakpoints = [
+        { min: 0, max: 12, i_low: 0, i_high: 50, c_low: 0, c_high: 12 },
+        { min: 12.1, max: 35.4, i_low: 51, i_high: 100, c_low: 12.1, c_high: 35.4 },
+        { min: 35.5, max: 55.4, i_low: 101, i_high: 150, c_low: 35.5, c_high: 55.4 },
+        { min: 55.5, max: 150.4, i_low: 151, i_high: 200, c_low: 55.5, c_high: 150.4 },
+        { min: 150.5, max: 250.4, i_low: 201, i_high: 300, c_low: 150.5, c_high: 250.4 },
+        { min: 250.5, max: 350.4, i_low: 301, i_high: 400, c_low: 250.5, c_high: 350.4 },
+        { min: 350.5, max: 500, i_low: 401, i_high: 500, c_low: 350.5, c_high: 500 }
+    ];
+    
+    # Calculate sub-indices
+    mut pm25_index: number = calculate_subindex(pm25, pm25_breakpoints);
+    
+    # Similar calculations for other pollutants...
+    # For simplicity, returning just PM2.5 index
+    return {
+        overall_aqi: pm25_index,
+        pm25: pm25_index,
+        category: pm25_index <= 50 ? "Good" : pm25_index <= 100 ? "Moderate" : "Unhealthy"
+    };
+}
+
+def carbon_footprint_calculation(transportation: Object, energy: Object, diet: Object) -> number {
+    mut total: number = 0;
+    
+    # Transportation emissions (kg CO2)
+    total = total + transportation.car * 0.192; # kg CO2 per mile
+    total = total + transportation.public_transport * 0.027; # kg CO2 per mile
+    total = total + transportation.flight * 0.255; # kg CO2 per mile
+    
+    # Energy emissions (kg CO2)
+    total = total + energy.electricity * 0.474; # kg CO2 per kWh
+    total = total + energy.gas * 0.184; # kg CO2 per therm
+    
+    # Diet emissions (kg CO2)
+    total = total + diet.meat * 27.0; # kg CO2 per kg
+    total = total + diet.dairy * 1.9; # kg CO2 per kg
+    total = total + diet.plant_based * 0.9; # kg CO2 per kg
+    
+    return total;
+}
+
+def water_footprint_calculation(activity: Object) -> number {
+    mut total: number = 0;
+    
+    # Direct water use
+    total = total + activity.shower * 60; # liters per shower
+    total = total + activity.bath * 150; # liters per bath
+    total = total + activity.dishwasher * 15; # liters per cycle
+    total = total + activity.washing_machine * 50; # liters per cycle
+    
+    # Indirect water use (embedded in products)
+    total = total + activity.beef * 15000; # liters per kg
+    total = total + activity.chicken * 4300; # liters per kg
+    total = total + activity.rice * 2500; # liters per kg
+    total = total + activity.coffee * 180; # liters per cup
+    
+    return total;
+}
+
+def noise_pollution_analysis(readings: Array<number>) -> Object {
+    mut avg_noise: number = mean(readings);
+    mut max_noise: number = max_array(readings);
+    mut min_noise: number = min_array(readings);
+    
+    mut noise_category: string = "";
+    if (avg_noise <= 40) {
+        noise_category = "Quiet";
+    } else if (avg_noise <= 60) {
+        noise_category = "Moderate";
+    } else if (avg_noise <= 80) {
+        noise_category = "Loud";
+    } else {
+        noise_category = "Very Loud";
+    }
+    
+    return {
+        average: avg_noise,
+        maximum: max_noise,
+        minimum: min_noise,
+        category: noise_category,
+        readings_count: readings.length
+    };
+}
+
+def urban_heat_island_effect(temperature_data: Array<Object>) -> Object {
+    mut city_temps: Array<number> = [];
+    mut rural_temps: Array<number> = [];
+    
+    for (data in temperature_data) {
+        if (data.location_type == "city") {
+            city_temps.push(data.temperature);
+        } else {
+            rural_temps.push(data.temperature);
+        }
+    }
+    
+    mut city_avg: number = mean(city_temps);
+    mut rural_avg: number = mean(rural_temps);
+    mut uhi_intensity: number = city_avg - rural_avg;
+    
+    return {
+        city_average: city_avg,
+        rural_average: rural_avg,
+        uhi_intensity: uhi_intensity,
+        significance: uhi_intensity > 1 ? "Significant" : "Minor"
+    };
+}
+
+# --- ۵۱. توابع با الگوی پردازش داده‌های کشاورزی ---
+def crop_yield_prediction(weather: Object, soil: Object, irrigation: Object) -> number {
+    mut yield_factor: number = 1.0;
+    
+    # Temperature effect
+    mut optimal_temp: number = 25;
+    mut temp_diff: number = abs(weather.temperature - optimal_temp);
+    yield_factor = yield_factor * (1 - temp_diff * 0.02);
+    
+    # Rainfall effect
+    mut optimal_rainfall: number = 1000; # mm per year
+    mut rainfall_diff: number = abs(weather.rainfall - optimal_rainfall);
+    yield_factor = yield_factor * (1 - rainfall_diff * 0.0001);
+    
+    # Soil quality effect
+    yield_factor = yield_factor * soil.fertility;
+    
+    # Irrigation effect
+    yield_factor = yield_factor * (1 + irrigation.efficiency * 0.2);
+    
+    return 5000 * yield_factor; # Base yield in kg/ha
+}
+
+def soil_health_index(ph: number, organic_matter: number, nitrogen: number, phosphorus: number, potassium: number) -> number {
+    mut ph_score: number = 0;
+    if (ph >= 6.0 && ph <= 7.0) {
+        ph_score = 1.0;
+    } else if (ph >= 5.5 && ph <= 7.5) {
+        ph_score = 0.8;
+    } else {
+        ph_score = 0.5;
+    }
+    
+    mut om_score: number = min(1.0, organic_matter / 5.0); # Organic matter percentage
+    mut n_score: number = min(1.0, nitrogen / 100); # Nitrogen in kg/ha
+    mut p_score: number = min(1.0, phosphorus / 50); # Phosphorus in kg/ha
+    mut k_score: number = min(1.0, potassium / 200); # Potassium in kg/ha
+    
+    return (ph_score + om_score + n_score + p_score + k_score) / 5;
+}
+
+def pest_risk_assessment(weather: Object, crop_type: string, field_history: Object) -> Object {
+    mut risk_score: number = 0;
+    
+    # Temperature and humidity effect
+    if (weather.temperature > 20 && weather.humidity > 60) {
+        risk_score = risk_score + 0.3;
+    }
+    
+    # Crop type susceptibility
+    mut crop_risk: Object = {
+        "wheat": 0.2,
+        "rice": 0.4,
+        "corn": 0.3,
+        "soybean": 0.25
+    };
+    risk_score = risk_score + (crop_risk[crop_type] || 0.2);
+    
+    # Field history effect
+    if (field_history.previous_pests) {
+        risk_score = risk_score + 0.2;
+    }
+    
+    mut risk_level: string = "";
+    if (risk_score < 0.3) {
+        risk_level = "Low";
+    } else if (risk_score < 0.6) {
+        risk_level = "Medium";
+    } else {
+        risk_level = "High";
+    }
+    
+    return {
+        risk_score: risk_score,
+        risk_level: risk_level,
+        recommendations: risk_level == "High" ? ["Crop rotation", "Pest monitoring", "Biological control"] : ["Regular monitoring"]
+    };
+}
+
+def irrigation_optimization(soil_moisture: Array<number>, weather_forecast: Array<Object>, crop_stage: string) -> Array<number> {
+    mut irrigation_schedule: Array<number> = [];
+    
+    for (i in range(soil_moisture.length)) {
+        mut moisture: number = soil_moisture[i];
+        mut forecast = weather_forecast[i];
+        
+        mut irrigation_needed: number = 0;
+        
+        # Determine irrigation based on soil moisture and forecast
+        if (moisture < 30) { # Below optimal moisture level
+            if (forecast.rainfall < 5) { # No rain expected
+                irrigation_needed = 20; # mm of water
+            }
+        } else if (moisture < 40 && forecast.temperature > 30) {
+            irrigation_needed = 10;
+        }
+        
+        # Adjust based on crop stage
+        if (crop_stage == "flowering" || crop_stage == "fruiting") {
+            irrigation_needed = irrigation_needed * 1.2;
+        }
+        
+        irrigation_schedule.push(irrigation_needed);
+    }
+    
+    return irrigation_schedule;
+}
+
+def fertilizer_recommendation(soil_test: Object, crop_type: string, yield_target: number) -> Object {
+    mut recommendations: Object = {};
+    
+    # Calculate nitrogen requirement
+    mut n_requirement: number = yield_target * 2.5; # kg N per ton of yield
+    if (soil_test.nitrogen > 50) {
+        n_requirement = n_requirement * 0.8; # Reduce if soil is already rich
+    }
+    
+    # Calculate phosphorus requirement
+    mut p_requirement: number = yield_target * 0.5;
+    if (soil_test.phosphorus > 20) {
+        p_requirement = p_requirement * 0.8;
+    }
+    
+    # Calculate potassium requirement
+    mut k_requirement: number = yield_target * 1.5;
+    if (soil_test.potassium > 100) {
+        k_requirement = k_requirement * 0.8;
+    }
+    
+    return {
+        nitrogen: n_requirement,
+        phosphorus: p_requirement,
+        potassium: k_requirement,
+        application_timing: {
+            nitrogen: ["Pre-planting", "Tillering", "Flowering"],
+            phosphorus: ["Pre-planting"],
+            potassium: ["Pre-planting", "Flowering"]
+        }
+    };
+}
+
+# --- ۵۲. توابع با الگوی پردازش داده‌های حمل و نقل ---
+def traffic_flow_optimization(intersections: Array<Object>, traffic_data: Array<Object>) -> Object {
+    mut optimization_result: Object = {
+        signal_timings: [],
+        expected_improvement: 0
+    };
+    
+    for (intersection in intersections) {
+        mut total_flow: number = 0;
+        for (approach in intersection.approaches) {
+            total_flow = total_flow + approach.flow_rate;
+        }
+        
+        mut green_time: number = (intersection.approach1.flow_rate / total_flow) * 60;
+        optimization_result.signal_timings.push({
+            intersection_id: intersection.id,
+            green_time: green_time,
+            yellow_time: 3,
+            red_time: 60 - green_time - 3
+        });
+    }
+    
+    optimization_result.expected_improvement = 25; # Percentage improvement
+    
+    return optimization_result;
+}
+
+def route_optimization(start: (number, number), end: (number, number), waypoints: Array<(number, number)>) -> Object {
+    mut all_points = [start] + waypoints + [end];
+    mut best_route: Array<(number, number)> = [];
+    mut best_distance: number = Infinity;
+    
+    # Simple nearest neighbor algorithm for TSP
+    mut unvisited = all_points.slice(1); # Exclude start
+    mut current = start;
+    mut route = [start];
+    
+    while (unvisited.length > 0) {
+        mut nearest: (number, number) = unvisited[0];
+        mut min_dist: number = haversine_distance(current[0], current[1], nearest[0], nearest[1]);
+        
+        for (point in unvisited) {
+            mut dist: number = haversine_distance(current[0], current[1], point[0], point[1]);
+            if (dist < min_dist) {
+                min_dist = dist;
+                nearest = point;
+            }
+        }
+        
+        route.push(nearest);
+        current = nearest;
+        unvisited = unvisited.filter(fn(p: (number, number)) -> boolean { return p != nearest; });
+    }
+    
+    route.push(end);
+    
+    mut total_distance: number = 0;
+    for (i in range(route.length - 1)) {
+        total_distance = total_distance + haversine_distance(
+            route[i][0], route[i][1], 
+            route[i+1][0], route[i+1][1]
+        );
+    }
+    
+    return {
+        route: route,
+        total_distance: total_distance,
+        estimated_time: total_distance / 50 # Assuming 50 km/h average speed
+    };
+}
+
+def public_transport_optimization(routes: Array<Object>, demand_data: Array<Object>) -> Object {
+    mut optimization: Object = {
+        route_adjustments: [],
+        frequency_changes: [],
+        new_stops: []
+    };
+    
+    for (route in routes) {
+        mut avg_load: number = mean(route.load_factors);
+        
+        if (avg_load > 0.8) {
+            optimization.frequency_changes.push({
+                route_id: route.id,
+                current_frequency: route.frequency,
+                new_frequency: route.frequency * 0.8,
+                reason: "High passenger load"
+            });
+        } else if (avg_load < 0.3) {
+            optimization.frequency_changes.push({
+                route_id: route.id,
+                current_frequency: route.frequency,
+                new_frequency: route.frequency * 1.2,
+                reason: "Low passenger load"
+            });
+        }
+    }
+    
+    return optimization;
+}
+
+def parking_availability_prediction(area: string, time: Object, weather: Object) -> Object {
+    mut base_availability: number = 0.5; # 50% average availability
+    
+    # Time-based adjustments
+    if (time.hour >= 9 && time.hour <= 17) {
+        base_availability = base_availability * 0.7; # Business hours - less available
+    } else if (time.hour >= 18 && time.hour <= 22) {
+        base_availability = base_availability * 0.8; # Evening - moderate availability
+    }
+    
+    # Day of week adjustments
+    if (time.day_of_week == 5 || time.day_of_week == 6) { # Weekend
+        base_availability = base_availability * 1.2;
+    }
+    
+    # Weather adjustments
+    if (weather.precipitation > 0) {
+        base_availability = base_availability * 1.3; # More people drive, more parking needed
+    }
+    
+    # Special events adjustment (would need event data)
+    # base_availability = base_availability * event_factor;
+    
+    return {
+        predicted_availability: base_availability,
+        confidence: 0.8,
+        recommendations: base_availability < 0.3 ? ["Use public transport", "Arrive early"] : ["Standard parking available"]
+    };
+}
+
+def fuel_efficiency_optimization(driving_data: Array<Object>) -> Object {
+    mut optimizations: Object = {
+        driving_habits: [],
+        route_suggestions: [],
+        vehicle_maintenance: []
+    };
+    
+    mut avg_speed: number = mean(driving_data.map(fn(d: Object) -> number { return d.speed; }));
+    mut avg_rpm: number = mean(driving_data.map(fn(d: Object) -> number { return d.rpm; }));
+    mut harsh_braking_count: number = driving_data.filter(fn(d: Object) -> boolean { return d.braking_force > 0.8; }).length;
+    
+    if (avg_speed > 80) {
+        optimizations.driving_habits.push("Reduce speed to 60-80 km/h for better fuel efficiency");
+    }
+    
+    if (avg_rpm > 2500) {
+        optimizations.driving_habits.push("Shift to higher gear to reduce RPM");
+    }
+    
+    if (harsh_braking_count > driving_data.length * 0.1) {
+        optimizations.driving_habits.push("Practice smoother braking to improve fuel efficiency");
+    }
+    
+    return optimizations;
+}
+
+# --- ۵۳. توابع با الگوی پردازش داده‌های انرژی ---
+def solar_energy_prediction(location: Object, weather_forecast: Array<Object>, panel_specs: Object) -> Array<number> {
+    mut energy_production: Array<number> = [];
+    
+    for (day in weather_forecast) {
+        mut solar_irradiance: number = 0;
+        
+        # Calculate solar irradiance based on weather conditions
+        if (day.cloud_cover < 20) {
+            solar_irradiance = 1000; # Clear sky
+        } else if (day.cloud_cover < 60) {
+            solar_irradiance = 1000 * (1 - day.cloud_cover / 100) * 0.8;
+        } else {
+            solar_irradiance = 1000 * (1 - day.cloud_cover / 100) * 0.3;
+        }
+        
+        # Adjust for temperature (efficiency decreases with temperature)
+        mut temp_factor: number = 1 - (day.temperature - 25) * 0.005;
+        
+        # Calculate energy production
+        mut daily_energy: number = solar_irradiance * panel_specs.area * panel_specs.efficiency * temp_factor * day.daylight_hours;
+        
+        energy_production.push(daily_energy);
+    }
+    
+    return energy_production;
+}
+
+def wind_energy_prediction(wind_data: Array<Object>, turbine_specs: Object) -> Array<number> {
+    mut energy_production: Array<number> = [];
+    
+    for (data in wind_data) {
+        mut wind_speed: number = data.average_speed;
+        mut power: number = 0;
+        
+        # Wind turbine power curve
+        if (wind_speed < turbine_specs.cut_in_speed) {
+            power = 0;
+        } else if (wind_speed >= turbine_specs.cut_in_speed && wind_speed < turbine_specs.rated_speed) {
+            # Power increases with cube of wind speed
+            power = turbine_specs.rated_power * ((wind_speed - turbine_specs.cut_in_speed) / (turbine_specs.rated_speed - turbine_specs.cut_in_speed)) ** 3;
+        } else if (wind_speed >= turbine_specs.rated_speed && wind_speed < turbine_specs.cut_out_speed) {
+            power = turbine_specs.rated_power;
+        } else {
+            power = 0; # Cut out for safety
+        }
+        
+        energy_production.push(power * 24); # Daily energy production
+    }
+    
+    return energy_production;
+}
+
+def energy_demand_forecasting(historical_data: Array<Object>, weather_forecast: Array<Object>, time_features: Array<Object>) -> Array<number> {
+    mut demand_forecast: Array<number> = [];
+    
+    for (i in range(weather_forecast.length)) {
+        mut base_demand: number = 1000; # Base demand
+        
+        # Temperature effect
+        mut temp_effect: number = abs(weather_forecast[i].temperature - 20) * 10;
+        base_demand = base_demand + temp_effect;
+        
+        # Time of day effect
+        mut time_effect: number = 0;
+        if (time_features[i].hour >= 6 && time_features[i].hour <= 9) {
+            time_effect = 200; # Morning peak
+        } else if (time_features[i].hour >= 17 && time_features[i].hour <= 20) {
+            time_effect = 300; # Evening peak
+        } else if (time_features[i].hour >= 22 || time_features[i].hour <= 4) {
+            time_effect = -100; # Night low
+        }
+        
+        # Day of week effect
+        if (time_features[i].day_of_week == 5 || time_features[i].day_of_week == 6) {
+            time_effect = time_effect - 50; # Weekend reduction
+        }
+        
+        demand_forecast.push(base_demand + time_effect);
+    }
+    
+    return demand_forecast;
+}
+
+def smart_grid_optimization(load_data: Array<Object>, generation_data: Array<Object>, storage_data: Object) -> Object {
+    mut optimization: Object = {
+        load_shifting: [],
+        storage_management: [],
+        generation_scheduling: []
+    };
+    
+    mut total_load: number = sum_array(load_data.map(fn(l: Object) -> number { return l.demand; }));
+    mut total_generation: number = sum_array(generation_data.map(fn(g: Object) -> number { return g.output; }));
+    
+    if (total_generation > total_load) {
+        # Excess generation - charge storage
+        optimization.storage_management.push({
+            action: "Charge batteries",
+            amount: total_generation - total_load
+        });
+    } else {
+        # Deficit - discharge storage and adjust load
+        mut deficit: number = total_load - total_generation;
+        
+        optimization.storage_management.push({
+            action: "Discharge batteries",
+            amount: min(deficit, storage_data.capacity * 0.8)
+        });
+        
+        optimization.load_shifting.push({
+            action: "Shift non-essential loads",
+            amount: deficit * 0.3
+        });
+    }
+    
+    return optimization;
+}
+
+def energy_efficiency_audit(building_data: Object) -> Object {
+    mut audit_results: Object = {
+        energy_consumption: 0,
+        efficiency_score: 0,
+        recommendations: []
+    };
+    
+    # Calculate energy consumption
+    audit_results.energy_consumption = building_data.electricity_usage + 
+                                      building_data.gas_usage * 10.36 + 
+                                      building_data.heating_oil_usage * 138.7;
+    
+    # Calculate efficiency score (1-10)
+    mut floor_area: number = building_data.floor_area;
+    mut energy_intensity: number = audit_results.energy_consumption / floor_area;
+    
+    if (energy_intensity < 50) {
+        audit_results.efficiency_score = 9;
+    } else if (energy_intensity < 100) {
+        audit_results.efficiency_score = 7;
+    } else if (energy_intensity < 150) {
+        audit_results.efficiency_score = 5;
+    } else if (energy_intensity < 200) {
+        audit_results.efficiency_score = 3;
+    } else {
+        audit_results.efficiency_score = 1;
+    }
+    
+    # Generate recommendations
+    if (building_data.hvac_efficiency < 0.8) {
+        audit_results.recommendations.push("Upgrade HVAC system for better efficiency");
+    }
+    
+    if (building_data.insulation_level < 0.7) {
+        audit_results.recommendations.push("Improve building insulation");
+    }
+    
+    if (building_data.lighting_efficiency < 0.6) {
+        audit_results.recommendations.push("Switch to LED lighting");
+    }
+    
+    return audit_results;
+}
+
+# --- ۵۴. توابع با الگوی پردازش داده‌های صنعتی ---
+def predictive_maintenance(vibration_data: Array<Object>, temperature_data: Array<Object>, operational_hours: number) -> Object {
+    mut maintenance_prediction: Object = {
+        component_health: {},
+        maintenance_recommendations: [],
+        predicted_failure_date: null
+    };
+    
+    # Analyze vibration patterns
+    mut vibration_trend: Array<number> = vibration_data.map(fn(v: Object) -> number { return v.amplitude; });
+    mut vibration_slope: number = calculate_slope(vibration_trend);
+    
+    # Analyze temperature patterns
+    mut temperature_trend: Array<number> = temperature_data.map(fn(t: Object) -> number { return t.value; });
+    mut temperature_slope: number = calculate_slope(temperature_trend);
+    
+    # Calculate component health scores
+    for (component in ["bearing", "gear", "motor"]) {
+        mut health_score: number = 1.0;
+        
+        if (vibration_slope > 0.1) {
+            health_score = health_score - 0.3;
+        }
+        
+        if (temperature_slope > 0.05) {
+            health_score = health_score - 0.2;
+        }
+        
+        if (operational_hours > 10000) {
+            health_score = health_score - (operational_hours - 10000) * 0.00001;
+        }
+        
+        maintenance_prediction.component_health[component] = max(0, health_score);
+    }
+    
+    # Generate recommendations
+    if (vibration_slope > 0.1) {
+        maintenance_prediction.maintenance_recommendations.push("Schedule vibration analysis and alignment check");
+    }
+    
+    if (temperature_slope > 0.05) {
+        maintenance_prediction.maintenance_recommendations.push("Check cooling system and lubrication");
+    }
+    
+    return maintenance_prediction;
+}
+
+def quality_control_analysis(production_data: Array<Object>, quality_standards: Object) -> Object {
+    mut quality_report: Object = {
+        defect_rate: 0,
+        quality_score: 0,
+        areas_of_concern: [],
+        recommendations: []
+    };
+    
+    mut total_units: number = production_data.length;
+    mut defective_units: number = 0;
+    
+    for (unit in production_data) {
+        if (unit.dimensions.length < quality_standards.min_length || 
+            unit.dimensions.length > quality_standards.max_length) {
+            defective_units = defective_units + 1;
+            quality_report.areas_of_concern.push("Dimensional accuracy");
+        }
+        
+        if (unit.surface_finish < quality_standards.min_finish) {
+            defective_units = defective_units + 1;
+            quality_report.areas_of_concern.push("Surface finish");
+        }
+        
+        if (unit.material_strength < quality_standards.min_strength) {
+            defective_units = defective_units + 1;
+            quality_report.areas_of_concern.push("Material strength");
+        }
+    }
+    
+    quality_report.defect_rate = (defective_units / total_units) * 100;
+    quality_report.quality_score = 100 - quality_report.defect_rate;
+    
+    # Generate recommendations
+    if (quality_report.defect_rate > 5) {
+        quality_report.recommendations.push("Review production process and implement tighter controls");
+    }
+    
+    if (quality_report.areas_of_concern.contains("Dimensional accuracy")) {
+        quality_report.recommendations.push("Calibrate machining equipment");
+    }
+    
+    return quality_report;
+}
+
+def supply_chain_optimization(demand_forecast: Array<number>, supplier_data: Array<Object>, inventory_data: Object) -> Object {
+    mut optimization: Object = {
+        reorder_points: [],
+        safety_stock: [],
+        supplier_selection: [],
+        cost_savings: 0
+    };
+    
+    mut avg_demand: number = mean(demand_forecast);
+    mut demand_std: number = standard_deviation(demand_forecast);
+    
+    for (supplier in supplier_data) {
+        mut lead_time: number = supplier.lead_time;
+        mut lead_time_std: number = supplier.lead_time_std || lead_time * 0.2;
+        
+        # Calculate reorder point
+        mut z_score: number = 1.65; # 95% service level
+        mut reorder_point: number = avg_demand * lead_time + z_score * Math.sqrt(lead_time) * demand_std;
+        
+        # Calculate safety stock
+        mut safety_stock: number = z_score * Math.sqrt(lead_time) * demand_std;
+        
+        optimization.reorder_points.push({
+            supplier_id: supplier.id,
+            reorder_point: reorder_point
+        });
+        
+        optimization.safety_stock.push({
+            supplier_id: supplier.id,
+            safety_stock: safety_stock
+        });
+        
+        # Supplier selection based on cost and reliability
+        mut total_cost: number = supplier.unit_cost * avg_demand * 12 + 
+                                safety_stock * supplier.holding_cost + 
+                                supplier.ordering_cost * 12;
+        
+        optimization.supplier_selection.push({
+            supplier_id: supplier.id,
+            total_annual_cost: total_cost,
+            recommended_order_quantity: Math.sqrt((2 * avg_demand * 12 * supplier.ordering_cost) / supplier.holding_cost)
+        });
+    }
+    
+    return optimization;
+}
+
+def production_scheduling(orders: Array<Object>, machine_capacity: Array<Object>, setup_times: Object) -> Object {
+    mut schedule: Object = {
+        machine_assignments: [],
+        production_sequence: [],
+        makespan: 0
+    };
+    
+    # Simple greedy algorithm for job shop scheduling
+    mut unscheduled_orders = orders.copy();
+    mut current_time: number = 0;
+    
+    while (unscheduled_orders.length > 0) {
+        mut best_order = null;
+        mut best_completion_time: number = Infinity;
+        
+        for (order in unscheduled_orders) {
+            mut machine_id: string = order.required_machine;
+            mut machine = machine_capacity.find(fn(m: Object) -> boolean { return m.id == machine_id; });
+            
+            mut setup_time: number = setup_times[order.previous_operation]?.[order.current_operation] || 0;
+            mut processing_time: number = order.processing_time;
+            mut completion_time: number = current_time + setup_time + processing_time;
+            
+            if (completion_time < best_completion_time) {
+                best_completion_time = completion_time;
+                best_order = order;
+            }
+        }
+        
+        if (best_order != null) {
+            schedule.machine_assignments.push({
+                order_id: best_order.id,
+                machine_id: best_order.required_machine,
+                start_time: current_time,
+                end_time: best_completion_time
+            });
+            
+            current_time = best_completion_time;
+            unscheduled_orders = unscheduled_orders.filter(fn(o: Object) -> boolean { return o.id != best_order.id; });
+        }
+    }
+    
+    schedule.makespan = current_time;
+    
+    return schedule;
+}
+
+def inventory_management(demand_history: Array<number>, lead_time: number, holding_cost: number, ordering_cost: number) -> Object {
+    mut avg_demand: number = mean(demand_history);
+    mut demand_std: number = standard_deviation(demand_history);
+    
+    # Economic Order Quantity (EOQ)
+    mut eoq: number = Math.sqrt((2 * avg_demand * ordering_cost) / holding_cost);
+    
+    # Reorder Point (ROP)
+    mut z_score: number = 1.65; # 95% service level
+    mut rop: number = avg_demand * lead_time + z_score * Math.sqrt(lead_time) * demand_std;
+    
+    # Safety Stock
+    mut safety_stock: number = z_score * Math.sqrt(lead_time) * demand_std;
+    
+    # Total Annual Cost
+    mut annual_holding_cost: number = (eoq / 2 + safety_stock) * holding_cost;
+    mut annual_ordering_cost: number = (avg_demand / eoq) * ordering_cost;
+    mut total_annual_cost: number = annual_holding_cost + annual_ordering_cost;
+    
+    return {
+        eoq: eoq,
+        reorder_point: rop,
+        safety_stock: safety_stock,
+        annual_holding_cost: annual_holding_cost,
+        annual_ordering_cost: annual_ordering_cost,
+        total_annual_cost: total_annual_cost
+    };
+}
+
+# --- ۵۵. توابع با الگوی پردازش داده‌های لجستیک ---
+def route_planning(depot: (number, number), destinations: Array<(number, number)>, vehicle_capacity: number, demands: Array<number>) -> Object {
+    mut routes: Array<Array<(number, number)>> = [];
+    mut unvisited = destinations.copy();
+    mut current_route: Array<(number, number)> = [depot];
+    mut current_load: number = 0;
+    
+    while (unvisited.length > 0) {
+        mut nearest: (number, number) = unvisited[0];
+        mut min_dist: number = haversine_distance(current_route[current_route.length - 1][0], current_route[current_route.length - 1][1], nearest[0], nearest[1]);
+        
+        for (destination in unvisited) {
+            mut dist: number = haversine_distance(current_route[current_route.length - 1][0], current_route[current_route.length - 1][1], destination[0], destination[1]);
+            if (dist < min_dist) {
+                min_dist = dist;
+                nearest = destination;
+            }
+        }
+        
+        mut destination_index: number = destinations.index_of(nearest);
+        mut demand: number = demands[destination_index];
+        
+        if (current_load + demand <= vehicle_capacity) {
+            current_route.push(nearest);
+            current_load = current_load + demand;
+            unvisited = unvisited.filter(fn(d: (number, number)) -> boolean { return d != nearest; });
+        } else {
+            current_route.push(depot); // Return to depot
+            routes.push(current_route);
+            current_route = [depot];
+            current_load = 0;
+        }
+    }
+    
+    if (current_route.length > 1) {
+        current_route.push(depot);
+        routes.push(current_route);
+    }
+    
+    return {
+        routes: routes,
+        total_distance: routes.map(fn(r: Array<(number, number)>) -> number {
+            mut dist: number = 0;
+            for (i in range(r.length - 1)) {
+                dist = dist + haversine_distance(r[i][0], r[i][1], r[i+1][0], r[i+1][1]);
+            }
+            return dist;
+        }).reduce(fn(a: number, b: number) -> number { return a + b; }, 0)
+    };
+}
+
+def warehouse_optimization(inventory_data: Array<Object>, order_history: Array<Object>, warehouse_layout: Object) -> Object {
+    mut optimization: Object = {
+        slotting_recommendations: [],
+        picking_route_optimization: [],
+        space_utilization: 0
+    };
+    
+    # Calculate item popularity
+    mut item_popularity: Object = {};
+    for (order in order_history) {
+        for (item in order.items) {
+            if (item_popularity[item.id] == null) {
+                item_popularity[item.id] = 0;
+            }
+            item_popularity[item.id] = item_popularity[item.id] + item.quantity;
+        }
+    }
+    
+    # Sort items by popularity
+    mut popular_items = Object.keys(item_popularity).sort(fn(a: string, b: string) -> number { return item_popularity[b] - item_popularity[a]; });
+    
+    # Generate slotting recommendations
+    mut zone_areas = warehouse_layout.zones.map(fn(z: Object) -> number { return z.length * z.width; });
+    mut total_area: number = zone_areas.reduce(fn(a: number, b: number) -> number { return a + b; }, 0);
+    
+    for (i in range(popular_items.length)) {
+        mut item_id: string = popular_items[i];
+        mut popularity: number = item_popularity[item_id];
+        mut zone_index: number = Math.min(Math.floor(i / (popular_items.length / warehouse_layout.zones.length)), warehouse_layout.zones.length - 1);
+        
+        optimization.slotting_recommendations.push({
+            item_id: item_id,
+            recommended_zone: warehouse_layout.zones[zone_index].id,
+            reason: i < popular_items.length * 0.2 ? "High popularity - Fast pick zone" : "Medium/Low popularity - Standard zone"
+        });
+    }
+    
+    # Calculate space utilization
+    mut total_used_space: number = 0;
+    for (item in inventory_data) {
+        total_used_space = total_used_space + item.quantity * item.volume;
+    }
+    
+    optimization.space_utilization = total_used_space / total_area;
+    
+    return optimization;
+}
+
+def demand_forecasting(historical_data: Array<Object>, seasonality_factors: Array<number>, trend: number) -> Array<number> {
+    mut forecast: Array<number> = [];
+    mut base_demand: number = mean(historical_data.map(fn(h: Object) -> number { return h.demand; }));
+    
+    for (i in range(12)) { # Forecast next 12 months
+        mut seasonal_factor: number = seasonality_factors[i % seasonality_factors.length];
+        mut trend_factor: number = 1 + (trend * i);
+        
+        mut predicted_demand: number = base_demand * seasonal_factor * trend_factor;
+        forecast.push(predicted_demand);
+    }
+    
+    return forecast;
+}
+
+def fleet_management(vehicle_data: Array<Object>, route_data: Array<Object>, fuel_prices: Array<number>) -> Object {
+    mut management: Object = {
+        optimal_routes: [],
+        fuel_efficiency: [],
+        maintenance_scheduling: [],
+        cost_analysis: {}
+    };
+    
+    # Calculate fuel efficiency for each vehicle
+    for (vehicle in vehicle_data) {
+        mut total_distance: number = 0;
+        mut total_fuel: number = 0;
+        
+        for (route in route_data.filter(fn(r: Object) -> boolean { return r.vehicle_id == vehicle.id; })) {
+            total_distance = total_distance + route.distance;
+            total_fuel = total_fuel + route.fuel_consumption;
+        }
+        
+        if (total_distance > 0) {
+            management.fuel_efficiency.push({
+                vehicle_id: vehicle.id,
+                efficiency: total_distance / total_fuel,
+                rank: 0 # Will be calculated
+            });
+        }
+    }
+    
+    # Rank vehicles by efficiency
+    management.fuel_efficiency = quick_sort(management.fuel_efficiency, fn(a: Object, b: Object) -> number { return b.efficiency - a.efficiency; });
+    for (i in range(management.fuel_efficiency.length)) {
+        management.fuel_efficiency[i].rank = i + 1;
+    }
+    
+    # Generate maintenance schedule
+    for (vehicle in vehicle_data) {
+        mut next_service: number = vehicle.last_service_mileage + vehicle.service_interval;
+        mut days_until_service: number = (next_service - vehicle.current_mileage) / vehicle.average_daily_mileage;
+        
+        if (days_until_service <= 30) {
+            management.maintenance_scheduling.push({
+                vehicle_id: vehicle.id,
+                service_type: "Scheduled maintenance",
+                due_date: new Date(Date.now() + days_until_service * 24 * 60 * 60 * 1000),
+                priority: days_until_service <= 7 ? "High" : "Medium"
+            });
+        }
+    }
+    
+    return management;
+}
+
+def last_mile_delivery_optimization(orders: Array<Object>, delivery_windows: Array<Object>, traffic_data: Array<Object>) -> Object {
+    mut optimization: Object = {
+        delivery_sequences: [],
+        time_window_compliance: 0,
+        cost_reduction: 0
+    };
+    
+    # Group orders by geographic area
+    mut delivery_areas = group_by(orders, fn(o: Object) -> string { return o.postal_code.substring(0, 3); });
+    
+    for (area in Object.keys(delivery_areas)) {
+        mut area_orders = delivery_areas[area];
+        mut sequence: Array<Object> = [];
+        
+        # Sort orders by delivery time window
+        area_orders = quick_sort(area_orders, fn(a: Object, b: Object) -> number { 
+            return delivery_windows[a.order_id].start_time - delivery_windows[b.order_id].start_time; 
+        });
+        
+        # Optimize route within area
+        mut current_location = orders[0].warehouse_location;
+        while (area_orders.length > 0) {
+            mut nearest_order = area_orders[0];
+            mut min_time: number = calculate_travel_time(current_location, nearest_order.delivery_location, traffic_data);
+            
+            for (order in area_orders) {
+                mut travel_time: number = calculate_travel_time(current_location, order.delivery_location, traffic_data);
+                if (travel_time < min_time) {
+                    min_time = travel_time;
+                    nearest_order = order;
+                }
+            }
+            
+            sequence.push(nearest_order);
+            current_location = nearest_order.delivery_location;
+            area_orders = area_orders.filter(fn(o: Object) -> boolean { return o.order_id != nearest_order.order_id; });
+        }
+        
+        optimization.delivery_sequences.push({
+            area: area,
+            sequence: sequence,
+            total_time: sequence.map(fn(o: Object) -> number { return o.estimated_delivery_time; }).reduce(fn(a: number, b: number) -> number { return a + b; }, 0)
+        });
+    }
+    
+    return optimization;
+}
+
+# --- ۵۶. توابع با الگوی پردازش داده‌های بازاریابی ---
+def customer_segmentation(customer_data: Array<Object
