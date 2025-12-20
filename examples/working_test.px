@@ -1,0 +1,36 @@
+// Test implemented language features
+const PI: number = 3.14159;
+mut counter: number = 0;
+
+def factorial(n: number) -> number {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+def add(a: number, b: number) -> number {
+    return a + b;
+}
+
+def main() -> void {
+    mut result: number = factorial(5);
+    counter = result;
+    
+    // Test if-else
+    if (counter > 100) {
+        counter = counter + 1;
+    } else {
+        counter = counter - 1;
+    }
+    
+    // Test while loop
+    while (counter < 20) {
+        counter = counter + 1;
+    }
+    
+    // Test function calls
+    mut sum: number = add(counter, 5);
+}
+
+main();

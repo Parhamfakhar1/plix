@@ -611,6 +611,12 @@ impl CodeGenerator for IRGenerator {
                 // For try expressions, we just generate the inner expression for now
                 self.generate_expression(expr)?;
             },
+
+            Expression::Block { statements, .. } => {
+                for stmt in statements {
+                    self.generate_statement(stmt)?;
+                }
+            },
         }
         
         Ok(())

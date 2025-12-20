@@ -228,6 +228,12 @@ impl ConstantFoldingOptimizer {
                 self.fold_constants_in_expression(expr)?;
             },
 
+            Expression::Block { statements, .. } => {
+                for stmt in statements {
+                    self.fold_constants_in_statement(stmt)?;
+                }
+            },
+
             Expression::Identifier(_, _) | Expression::Literal(_, _) => {
             },
         }

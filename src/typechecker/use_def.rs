@@ -470,7 +470,13 @@ Statement::Enum { name, generics: _, variants, span } => {
                 self.analyze_expression(expr);
             },
 
-crate::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
+            crate::parser::ast::Expression::Block { statements, .. } => {
+                for stmt in statements {
+                    self.analyze_statement(stmt);
+                }
+            },
+
+            crate::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                 // For now, just analyze the arguments
                 for arg in arguments {
                     self.analyze_expression(arg);
@@ -551,10 +557,16 @@ crate::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arg
                 self.collect_expression_dependencies(expr, dependent_name);
             },
             
+            crate::parser::ast::Expression::Block { statements, .. } => {
+                for stmt in statements {
+                    self.collect_statement_dependencies(std::slice::from_ref(stmt), dependent_name);
+                }
+            },
+            
             crate::parser::ast::Expression::Literal(_, _) => {
             },
 
-crate::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
+            crate::parser::ast::Expression::VariantCall { enum_name: _, variant_name: _, arguments, .. } => {
                 // For now, just collect dependencies from the arguments
                 for arg in arguments {
                     self.collect_expression_dependencies(arg, dependent_name);

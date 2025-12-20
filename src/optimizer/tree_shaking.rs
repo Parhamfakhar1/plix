@@ -90,6 +90,11 @@ impl TreeShakingOptimizer {
             Expression::Try { expr, .. } => {
                 self.collect_used_symbols(expr);
             },
+            Expression::Block { statements, .. } => {
+                for stmt in statements {
+                    self.collect_used_symbols_from_statement(stmt);
+                }
+            },
             Expression::Literal(_, _) => {},
         }
     }

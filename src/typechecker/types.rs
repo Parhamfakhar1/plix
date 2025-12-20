@@ -220,6 +220,12 @@ super::super::parser::ast::Expression::VariantCall { enum_name: _, variant_name:
                 // The actual Result type checking should be done in the type checker
                 Ok(expr_type)
             },
+            
+            super::super::parser::ast::Expression::Block { statements: _, .. } => {
+                // For block expressions, we'll return the type of the last expression
+                // For now, return Any as a placeholder
+                Ok(Type::Any)
+            },
         }
     }
 

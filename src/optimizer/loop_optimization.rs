@@ -61,6 +61,14 @@ impl LoopOptimizer {
             Expression::Try { expr, .. } => {
                 self.is_loop_invariant(expr, loop_depth)
             },
+            Expression::Block { statements, .. } => {
+                statements.iter().all(|stmt| {
+                    match stmt {
+                        Statement::Expression(expr, _) => self.is_loop_invariant(expr, loop_depth),
+                        _ => true,
+                    }
+                })
+            },
             Expression::Literal(_, _) => true,
         }
     }

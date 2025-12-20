@@ -928,6 +928,12 @@ impl TypeChecker {
 
                 Ok(())
             },
+            Expression::Block { statements, .. } => {
+                for stmt in statements {
+                    self.check_statement(stmt)?;
+                }
+                Ok(())
+            },
         }
     }
 

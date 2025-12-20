@@ -213,6 +213,10 @@ pub enum Expression {
         expr: Box<Expression>,
         span: Span,
     },
+    Block {
+        statements: Vec<Statement>,
+        span: Span,
+    },
 }
 
 impl Expression {
@@ -231,6 +235,7 @@ impl Expression {
             Expression::If { span, .. } => *span,
             Expression::Match { span, .. } => *span,
             Expression::Try { span, .. } => *span,
+            Expression::Block { span, .. } => *span,
         }
     }
 }

@@ -549,6 +549,36 @@ impl Parser {
                         arguments,
                         span,
                     })
+                } else if self.check(TokenKind::Dot) {
+                    // Handle member access: obj.property
+                    self.advance(); // consume .
+                    let member = self.expect_identifier("member name")?;
+                    let span = self.previous().span;
+                    let obj_expr = Expression::identifier(name);
+                    Ok(Expression::Member {
+                        expr: Box::new(obj_expr),
+                        member,
+                        span,
+                    })
+                } else if self.check(TokenKind::LBrace) {
+                    // Handle object literal: { key: value, ... }
+                    self.match_token(TokenKind::LBrace); // consume {
+                    let mut fields = Vec::new();
+                    if !self.check(TokenKind::RBrace) {
+                        loop {
+                            let key = self.expect_identifier("object key")?;
+                            self.expect(TokenKind::Colon, ":")?;
+                            let value = self.parse_expression()?;
+                            fields.push((key, value));
+                            
+                            if !self.match_token(TokenKind::Comma) {
+                                break;
+                            }
+                        }
+                    }
+                    self.expect(TokenKind::RBrace, "}")?;
+                    let span = self.previous().span;
+                    Ok(Expression::Literal(Literal::Object(fields), span))
                 } else {
                     Ok(Expression::identifier(name))
                 }
@@ -559,6 +589,21 @@ impl Parser {
             let expr = self.parse_expression()?;
             self.expect(TokenKind::RParen, ")")?;
             Ok(expr)
+        } else if self.match_token(TokenKind::LBrace) {
+            // Handle block expression: { statements }
+            let mut statements = Vec::new();
+            while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+                if let Some(stmt) = self.parse_statement()? {
+                    statements.push(stmt);
+                    self.expect(TokenKind::Semicolon, ";")?;
+                }
+            }
+            self.expect(TokenKind::RBrace, "}")?;
+            let span = self.previous().span;
+            Ok(Expression::Block {
+                statements,
+                span,
+            })
         } else {
             Err(self.error("Expected expression"))
         }
