@@ -28,12 +28,18 @@ impl Parser {
         let mut statements = Vec::new();
         
         while !self.is_at_end() {
-            if let Some(stmt) = self.parse_statement()? {
-                statements.push(stmt);
+            self.skip_whitespace_and_comments();
+            
+            if self.is_at_end() {
+                break;
             }
             
-            // Skip any newlines between statements
-            while self.match_token(TokenKind::Newline) {}
+            if let Some(stmt) = self.parse_statement()? {
+                statements.push(stmt);
+                
+                // Require semicolon after statement (JavaScript style)
+                self.expect(TokenKind::Semicolon, ";")?;
+            }
         }
         
         let end_pos = if statements.is_empty() {
@@ -47,11 +53,18 @@ impl Parser {
         })
     }
     
-    fn parse_statement(&mut self) -> CompilerResult<Option<Statement>> {
-        // Skip comments and newlines
-        while self.match_token(TokenKind::Comment) || self.match_token(TokenKind::Newline) {
-            // Just consume them
+    fn skip_whitespace_and_comments(&mut self) {
+        while !self.is_at_end() {
+            if self.check(TokenKind::Comment) || self.check(TokenKind::Newline) {
+                self.advance();
+            } else {
+                break;
+            }
         }
+    }
+    
+    fn parse_statement(&mut self) -> CompilerResult<Option<Statement>> {
+        self.skip_whitespace_and_comments();
         
         if self.is_at_end() {
             return Ok(None);
@@ -79,7 +92,7 @@ impl Parser {
             self.parse_class()
                 .map(|stmt| Some(stmt))
         } else {
-            // Parse expression statement (like print("hello"))
+            // Parse expression statement
             self.parse_expression()
                 .map(|expr| {
                     let span = expr.span();
@@ -129,11 +142,12 @@ impl Parser {
             None
         };
         
-        self.expect(TokenKind::Colon, ":")?;
+        // JavaScript style: require { } for function body
+        self.expect(TokenKind::LBrace, "{")?;
+        let body = self.parse_block_statements()?;
+        self.expect(TokenKind::RBrace, "}")?;
         
-        let body = self.parse_block()?;
-        
-        let span = Span::new(self.tokens[self.current - 1].span.start, self.previous().span.end);
+        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
         Ok(Statement::Function {
             name,
             parameters,
@@ -157,7 +171,7 @@ impl Parser {
         
         let value = self.parse_expression()?;
         
-        let span = Span::new(self.tokens[self.current - 2].span.start, self.previous().span.end);
+        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
         Ok(Statement::Constant {
             name,
             type_annotation,
@@ -179,7 +193,7 @@ impl Parser {
         
         let value = self.parse_expression()?;
         
-        let span = Span::new(self.tokens[self.current - 2].span.start, self.previous().span.end);
+        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
         Ok(Statement::Variable {
             mutable,
             name,
@@ -191,26 +205,31 @@ impl Parser {
     
     fn parse_if_statement(&mut self) -> CompilerResult<Statement> {
         let condition = self.parse_expression()?;
-        self.expect(TokenKind::Colon, ":")?;
         
-        let then_branch = self.parse_block()?;
+        // JavaScript style: require { } for if body
+        self.expect(TokenKind::LBrace, "{")?;
+        let then_branch = self.parse_block_statements()?;
+        self.expect(TokenKind::RBrace, "}")?;
         
         let mut elif_branches = Vec::new();
         let mut else_branch = None;
         
         while self.match_token(TokenKind::Elif) {
             let elif_condition = self.parse_expression()?;
-            self.expect(TokenKind::Colon, ":")?;
-            let elif_body = self.parse_block()?;
+            self.expect(TokenKind::LBrace, "{")?;
+            let elif_body = self.parse_block_statements()?;
+            self.expect(TokenKind::RBrace, "}")?;
             elif_branches.push((elif_condition, elif_body));
         }
         
         if self.match_token(TokenKind::Else) {
-            self.expect(TokenKind::Colon, ":")?;
-            else_branch = Some(self.parse_block()?);
+            self.expect(TokenKind::LBrace, "{")?;
+            let else_body = self.parse_block_statements()?;
+            self.expect(TokenKind::RBrace, "}")?;
+            else_branch = Some(else_body);
         }
         
-        let span = Span::new(self.tokens[self.current - 1].span.start, self.previous().span.end);
+        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
         Ok(Statement::If {
             condition,
             then_branch,
@@ -221,13 +240,13 @@ impl Parser {
     }
     
     fn parse_return(&mut self) -> CompilerResult<Statement> {
-        let value = if !self.check(TokenKind::Newline) && !self.is_at_end() {
+        let value = if !self.check(TokenKind::Semicolon) && !self.is_at_end() {
             Some(self.parse_expression()?)
         } else {
             None
         };
         
-        let span = Span::new(self.tokens[self.current - 1].span.start, self.previous().span.end);
+        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
         Ok(Statement::Return(value, span))
     }
     
@@ -242,44 +261,40 @@ impl Parser {
             None
         };
         
-        self.expect(TokenKind::Colon, ":")?;
+        self.expect(TokenKind::LBrace, "{")?;
         
         let mut fields = Vec::new();
         let mut methods = Vec::new();
         
-        self.expect(TokenKind::Indent, "indent")?;
-        
-        while !self.check(TokenKind::Dedent) && !self.is_at_end() {
-            // Skip comments and newlines inside class
-            while self.match_token(TokenKind::Comment) || self.match_token(TokenKind::Newline) {
-                // consume
-            }
+        while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+            self.skip_whitespace_and_comments();
             
-            if self.is_at_end() || self.check(TokenKind::Dedent) {
+            if self.is_at_end() || self.check(TokenKind::RBrace) {
                 break;
             }
             
-            // Check if it's a method (starts with def)
-            if self.check(TokenKind::Def) {
-                self.match_token(TokenKind::Def); // consume 'def'
+            if self.match_token(TokenKind::Def) {
                 let method = self.parse_function()?;
                 methods.push(method);
-            } else {
-                // It's a field: identifier : type
-                let name = self.expect_identifier("field name")?;
+                self.expect(TokenKind::Semicolon, ";")?;
+            } else if let TokenKind::Identifier(_) = self.peek().kind {
+                let field_name = self.expect_identifier("field name")?;
                 self.expect(TokenKind::Colon, ":")?;
                 let type_annotation = Some(self.parse_type()?);
                 fields.push(ClassField {
-                    name,
+                    name: field_name,
                     type_annotation,
                     visibility: Visibility::Public,
                 });
+                self.expect(TokenKind::Semicolon, ";")?;
+            } else {
+                return Err(self.error("Expected field or method definition in class"));
             }
         }
         
-        self.expect(TokenKind::Dedent, "dedent")?;
+        self.expect(TokenKind::RBrace, "}")?;
         
-        let span = Span::new(self.tokens[self.current - 1].span.start, self.previous().span.end);
+        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
         Ok(Statement::Class {
             name,
             base,
@@ -289,18 +304,21 @@ impl Parser {
         })
     }
     
-    fn parse_block(&mut self) -> CompilerResult<Vec<Statement>> {
+    fn parse_block_statements(&mut self) -> CompilerResult<Vec<Statement>> {
         let mut statements = Vec::new();
         
-        self.expect(TokenKind::Indent, "indent")?;
-        
-        while !self.check(TokenKind::Dedent) && !self.is_at_end() {
+        while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+            self.skip_whitespace_and_comments();
+            
+            if self.is_at_end() || self.check(TokenKind::RBrace) {
+                break;
+            }
+            
             if let Some(stmt) = self.parse_statement()? {
                 statements.push(stmt);
+                self.expect(TokenKind::Semicolon, ";")?;
             }
         }
-        
-        self.expect(TokenKind::Dedent, "dedent")?;
         
         Ok(statements)
     }
@@ -341,7 +359,7 @@ impl Parser {
         let mut expr = self.parse_comparison()?;
         
         loop {
-            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            self.skip_whitespace_and_comments();
             
             if self.check(TokenKind::Equal) {
                 self.advance();
@@ -363,7 +381,7 @@ impl Parser {
         let mut expr = self.parse_term()?;
         
         loop {
-            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            self.skip_whitespace_and_comments();
             
             if self.check(TokenKind::Less) {
                 self.advance();
@@ -393,7 +411,7 @@ impl Parser {
         let mut expr = self.parse_factor()?;
         
         loop {
-            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            self.skip_whitespace_and_comments();
             
             if self.check(TokenKind::Plus) {
                 self.advance();
@@ -415,7 +433,7 @@ impl Parser {
         let mut expr = self.parse_unary()?;
         
         loop {
-            while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+            self.skip_whitespace_and_comments();
             
             if self.check(TokenKind::Star) {
                 self.advance();
@@ -438,7 +456,7 @@ impl Parser {
     }
     
     fn parse_unary(&mut self) -> CompilerResult<Expression> {
-        while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+        self.skip_whitespace_and_comments();
         
         if self.check(TokenKind::Plus) {
             self.advance();
@@ -476,18 +494,11 @@ impl Parser {
     }
     
     fn parse_primary(&mut self) -> CompilerResult<Expression> {
-        // Skip newlines and comments before parsing
-        while self.match_token(TokenKind::Newline) || self.match_token(TokenKind::Comment) {}
+        self.skip_whitespace_and_comments();
         
         if self.match_token(TokenKind::IntegerLiteral(0)) {
             if let TokenKind::IntegerLiteral(value) = self.previous().kind {
                 Ok(Expression::integer(value))
-            } else {
-                unreachable!()
-            }
-        } else if self.match_token(TokenKind::NumberLiteral(0.0)) {
-            if let TokenKind::NumberLiteral(value) = self.previous().kind {
-                Ok(Expression::float(value))
             } else {
                 unreachable!()
             }
@@ -597,86 +608,47 @@ impl Parser {
             self.expect(TokenKind::Greater, ">")?;
         }
         
-        let mut variants = Vec::new();
-        let start_pos = self.previous().span.start;
+        self.expect(TokenKind::LBrace, "{")?;
         
-        if self.match_token(TokenKind::LBrace) {
-            // C-style: enum Color { Red, Green }
-            while !self.check(TokenKind::RBrace) && !self.is_at_end() {
-                let variant_name = self.expect_identifier("variant name")?;
-                
-                let mut fields = Vec::new();
-                if self.match_token(TokenKind::LParen) {
-                    if !self.check(TokenKind::RParen) {
-                        loop {
-                            let field_type = self.parse_type()?;
-                            fields.push(field_type);
-                            
-                            if !self.match_token(TokenKind::Comma) {
-                                break;
-                            }
+        let mut variants = Vec::new();
+        while !self.check(TokenKind::RBrace) && !self.is_at_end() {
+            let variant_name = self.expect_identifier("variant name")?;
+            
+            let mut fields = Vec::new();
+            if self.match_token(TokenKind::LParen) {
+                if !self.check(TokenKind::RParen) {
+                    loop {
+                        let field_type = self.parse_type()?;
+                        fields.push(field_type);
+                        
+                        if !self.match_token(TokenKind::Comma) {
+                            break;
                         }
                     }
-                    self.expect(TokenKind::RParen, ")")?;
                 }
-                
-                variants.push(EnumVariant {
-                    name: variant_name,
-                    fields,
-                });
-                
-                if self.check(TokenKind::RBrace) {
-                    break;
-                }
-                
-                self.expect(TokenKind::Comma, ",")?;
+                self.expect(TokenKind::RParen, ")")?;
             }
             
-            self.expect(TokenKind::RBrace, "}")?;
-        } else if self.match_token(TokenKind::Colon) {
-            // Python-style: enum Color:
-            //     Red
-            //     Green
-            self.expect(TokenKind::Indent, "indent")?;
+            variants.push(EnumVariant {
+                name: variant_name,
+                fields,
+            });
             
-            while !self.check(TokenKind::Dedent) && !self.is_at_end() {
-                let variant_name = self.expect_identifier("variant name")?;
-                
-                let mut fields = Vec::new();
-                if self.match_token(TokenKind::LParen) {
-                    if !self.check(TokenKind::RParen) {
-                        loop {
-                            let field_type = self.parse_type()?;
-                            fields.push(field_type);
-                            
-                            if !self.match_token(TokenKind::Comma) {
-                                break;
-                            }
-                        }
-                    }
-                    self.expect(TokenKind::RParen, ")")?;
-                }
-                
-                variants.push(EnumVariant {
-                    name: variant_name,
-                    fields,
-                });
-                
-                // Skip newlines between variants
-                while self.match_token(TokenKind::Newline) {}
+            if self.check(TokenKind::RBrace) {
+                break;
             }
             
-            self.expect(TokenKind::Dedent, "dedent")?;
-        } else {
-            return Err(self.error("Expected '{' or ':' after enum name"));
+            self.expect(TokenKind::Comma, ",")?;
         }
         
-        let end_pos = self.previous().span.end;
+        self.expect(TokenKind::RBrace, "}")?;
+        
+        let span = Span::new(self.tokens[0].span.start, self.previous().span.end);
         Ok(Statement::Enum {
             name,
             generics,
             variants,
-            span: Span::new(start_pos, end_pos),
+            span,
         })
     }
     
@@ -723,7 +695,6 @@ impl Parser {
         // Handle literal types specially - only check the variant, not the value
         match (current_kind, &kind) {
             (TokenKind::IntegerLiteral(_), TokenKind::IntegerLiteral(_)) => true,
-            (TokenKind::NumberLiteral(_), TokenKind::NumberLiteral(_)) => true,
             (TokenKind::StringLiteral(_), TokenKind::StringLiteral(_)) => true,
             (TokenKind::Identifier(a), TokenKind::Identifier(b)) if a == b => true,
             _ => current_kind == &kind,
