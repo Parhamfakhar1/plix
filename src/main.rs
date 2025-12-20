@@ -132,6 +132,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut vm_env = VirtualMachineEnvironment::new();
     vm_env.load_program(&optimized_program)?;
     
+    // Check if VM is ready before executing
+    if vm_env.get_state() != &vm::VMState::Ready {
+        eprintln!("Virtual machine is not ready to execute");
+        return Err("VM not ready".into());
+    }
+    
     match vm_env.execute() {
         Ok(()) => {
             println!("Execution completed successfully!");

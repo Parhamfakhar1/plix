@@ -42,12 +42,6 @@ pub enum ScopeError {
     
     #[error("Function '{name}' already defined in scope")]
     FunctionAlreadyDefined { name: String, span: Span },
-    
-    #[error("Undefined variable '{name}'")]
-    UndefinedVariable { name: String, span: Span },
-    
-    #[error("Type '{name}' already defined in scope")]
-    TypeAlreadyDefined { name: String, span: Span },
 }
 
 #[derive(Clone)]  // ✅ اضافه شد
@@ -107,40 +101,11 @@ impl Scope {
         Ok(())
     }
 
-    pub fn define_type(&mut self, name: String, type_: Type, span: Span) -> Result<(), ScopeError> {
-        if self.types.contains_key(&name) {
-            return Err(ScopeError::TypeAlreadyDefined { name, span });
-        }
-
-        self.types.insert(name, type_);
-        Ok(())
-    }
-
     pub fn lookup_variable(&self, name: &str) -> Option<&VariableInfo> {
         if let Some(var) = self.variables.get(name) {
             Some(var)
         } else if let Some(parent) = &self.parent {
             parent.lookup_variable(name)
-        } else {
-            None
-        }
-    }
-
-    pub fn lookup_function(&self, name: &str) -> Option<&FunctionInfo> {
-        if let Some(func) = self.functions.get(name) {
-            Some(func)
-        } else if let Some(parent) = &self.parent {
-            parent.lookup_function(name)
-        } else {
-            None
-        }
-    }
-
-    pub fn lookup_type(&self, name: &str) -> Option<&Type> {
-        if let Some(ty) = self.types.get(name) {
-            Some(ty)
-        } else if let Some(parent) = &self.parent {
-            parent.lookup_type(name)
         } else {
             None
         }
@@ -230,22 +195,27 @@ impl Type {
         matches!(self, Type::Result(_, _))
     }
 
+    #[allow(dead_code)]
     pub fn is_optional(&self) -> bool {
         matches!(self, Type::Optional(_))
     }
 
+    #[allow(dead_code)]
     pub fn is_enum(&self) -> bool {
         matches!(self, Type::Enum { .. })
     }
 
+    #[allow(dead_code)]
     pub fn is_unit(&self) -> bool {
         matches!(self, Type::Unit)
     }
 
+    #[allow(dead_code)]
     pub fn is_tuple(&self) -> bool {
         matches!(self, Type::Tuple(_))
     }
 
+    #[allow(dead_code)]
     pub fn is_union(&self) -> bool {
         matches!(self, Type::Union(_))
     }

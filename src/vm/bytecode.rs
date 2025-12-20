@@ -43,6 +43,10 @@ impl VirtualMachine {
     }
 
     pub fn execute(&mut self) -> VMResult<()> {
+        if self.state != VMState::Ready {
+            return Err(VMError::NotReady);
+        }
+        
         // Pretend we executed the compiled program successfully.
         self.state = VMState::Finished;
         Ok(())
@@ -75,6 +79,3 @@ impl std::fmt::Display for VMError {
 }
 
 impl std::error::Error for VMError {}
-
-
-

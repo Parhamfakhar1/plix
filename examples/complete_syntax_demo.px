@@ -1,0 +1,409 @@
+# Complete Plix Syntax Demo - Comprehensive Language Features
+# نشان‌دهندهٔ تمام ویژگی‌های کامل زبان Plix
+
+# --- ۱. تعاریف متغیرها و ثوابت ---
+mut x: number = 10;
+mut y: number = 20.5;
+mut name: string = "Plix";
+mut is_valid: boolean = true;
+mut nothing: null = null;
+mut undefined_value: undefined = undefined;
+
+const PI: number = 3.14159;
+const MAX_SIZE: number = 1000;
+const GREETING: string = "Hello, Plix!";
+
+# --- ۲. توابع کامل ---
+def add(a: number, b: number) -> number {
+    return a + b;
+}
+
+def greet(name: string) -> string {
+    return "Hello, " + name + "!";
+}
+
+def factorial(n: number) -> number {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+def calculate_area(radius: number) -> number {
+    return PI * radius * radius;
+}
+
+# --- ۳. کلاس‌ها و ارث‌بری ---
+class Shape {
+    color: string;
+    
+    def __init__(self, color: string) {
+        self.color = color;
+    }
+    
+    def get_color() -> string {
+        return self.color;
+    }
+    
+    def area() -> number {
+        return 0;
+    }
+}
+
+class Circle extends Shape {
+    radius: number;
+    
+    def __init__(radius: number, color: string) {
+        super.__init__(color);
+        self.radius = radius;
+    }
+    
+    def area() -> number {
+        return PI * self.radius * self.radius;
+    }
+    
+    def circumference() -> number {
+        return 2 * PI * self.radius;
+    }
+}
+
+class Rectangle extends Shape {
+    width: number;
+    height: number;
+    
+    def __init__(width: number, height: number, color: string) {
+        super.__init__(color);
+        self.width = width;
+        self.height = height;
+    }
+    
+    def area() -> number {
+        return self.width * self.height;
+    }
+    
+    def perimeter() -> number {
+        return 2 * (self.width + self.height);
+    }
+}
+
+# --- ۴. انواع داده‌های جبری (Enums) ---
+enum Color {
+    Red,
+    Green,
+    Blue
+}
+
+enum Result<T, E> {
+    Ok(T),
+    Err(E)
+}
+
+enum ShapeType {
+    Circle(radius: number),
+    Rectangle(width: number, height: number),
+    Triangle(a: number, b: number, c: number)
+}
+
+enum Option<T> {
+    Some(T),
+    None
+}
+
+# --- ۵. توابع با خطای برگشتی ---
+def safe_divide(x: number, y: number) -> Result<number, string> {
+    if (y == 0) {
+        return Result.Err("Cannot divide by zero");
+    }
+    return Result.Ok(x / y);
+}
+
+def safe_sqrt(x: number) -> Result<number, string> {
+    if (x < 0) {
+        return Result.Err("Cannot take square root of negative number");
+    }
+    return Result.Ok(x ** 0.5);
+}
+
+def process_number(value: number) -> Result<number, string> {
+    mut result = safe_divide(value, 2)?;
+    result = safe_sqrt(result)?;
+    return Result.Ok(result * 10);
+}
+
+# --- ۶. حلقه‌ها و ساختارهای کنترل ---
+def sum_array(numbers: Array<number>) -> number {
+    mut sum: number = 0;
+    for (num in numbers) {
+        sum = sum + num;
+    }
+    return sum;
+}
+
+def find_max(numbers: Array<number>) -> Option<number> {
+    if (numbers.length == 0) {
+        return Option.None;
+    }
+    
+    mut max: number = numbers[0];
+    mut i: number = 1;
+    
+    while (i < numbers.length) {
+        if (numbers[i] > max) {
+            max = numbers[i];
+        }
+        i = i + 1;
+    }
+    
+    return Option.Some(max);
+}
+
+# --- ۷. الگوهای تطابق (Pattern Matching) ---
+def describe_shape(shape: ShapeType) -> string {
+    match shape {
+        case ShapeType.Circle(radius) => {
+            return "A circle with radius " + radius;
+        }
+        case ShapeType.Rectangle(width, height) => {
+            return "A rectangle " + width + "x" + height;
+        }
+        case ShapeType.Triangle(a, b, c) => {
+            return "A triangle with sides " + a + ", " + b + ", " + c;
+        }
+    }
+}
+
+def handle_result<T, E>(result: Result<T, E>) -> string {
+    match result {
+        case Result.Ok(value) => {
+            return "Success: " + value;
+        }
+        case Result.Err(error) => {
+            return "Error: " + error;
+        }
+    }
+}
+
+def handle_option<T>(option: Option<T>) -> string {
+    match option {
+        case Option.Some(value) => {
+            return "Value: " + value;
+        }
+        case Option.None => {
+            return "No value";
+        }
+    }
+}
+
+# --- ۸. آرایه‌ها و اشیا ---
+def create_shapes() -> Array<Shape> {
+    mut shapes: Array<Shape> = [];
+    
+    shapes.push(Circle(5.0, "red"));
+    shapes.push(Rectangle(4.0, 3.0, "blue"));
+    shapes.push(Circle(2.0, "green"));
+    
+    return shapes;
+}
+
+def process_shapes(shapes: Array<Shape>) -> Array<number> {
+    mut areas: Array<number> = [];
+    
+    for (shape in shapes) {
+        areas.push(shape.area());
+    }
+    
+    return areas;
+}
+
+# --- ۹. توابع لامبدا و Higher-Order Functions ---
+def apply_function(numbers: Array<number>, func: fn(number) -> number) -> Array<number> {
+    mut result: Array<number> = [];
+    
+    for (num in numbers) {
+        result.push(func(num));
+    }
+    
+    return result;
+}
+
+def filter_numbers(numbers: Array<number>, predicate: fn(number) -> boolean) -> Array<number> {
+    mut result: Array<number> = [];
+    
+    for (num in numbers) {
+        if (predicate(num)) {
+            result.push(num);
+        }
+    }
+    
+    return result;
+}
+
+# --- ۱۰. کار با Result و خطاهای زنجیره‌ای ---
+def complex_calculation(x: number, y: number) -> Result<number, string> {
+    mut result = safe_divide(x, y)?;
+    result = safe_sqrt(result)?;
+    result = safe_divide(result, 2)?;
+    return Result.Ok(result + 10);
+}
+
+def handle_complex_calculation(x: number, y: number) -> string {
+    match complex_calculation(x, y) {
+        case Result.Ok(value) => {
+            return "Final result: " + value;
+        }
+        case Result.Err(error) => {
+            return "Calculation failed: " + error;
+        }
+    }
+}
+
+# --- ۱۱. توابع با پارامترهای پیش‌فرض ---
+def greet_person(name: string, greeting: string = "Hello", punctuation: string = "!") -> string {
+    return greeting + ", " + name + punctuation;
+}
+
+def calculate_total(price: number, tax_rate: number = 0.08, discount: number = 0) -> number {
+    mut total: number = price * (1 + tax_rate);
+    total = total * (1 - discount);
+    return total;
+}
+
+# --- ۱۲. توابع با چندین نوع بازگشتی ---
+def get_shape_info(shape: ShapeType) -> (string, number) {
+    match shape {
+        case ShapeType.Circle(radius) => {
+            return ("Circle", PI * radius * radius);
+        }
+        case ShapeType.Rectangle(width, height) => {
+            return ("Rectangle", width * height);
+        }
+        case ShapeType.Triangle(a, b, c) => {
+            # Heron's formula for triangle area
+            mut s: number = (a + b + c) / 2;
+            mut area: number = (s * (s - a) * (s - b) * (s - c)) ** 0.5;
+            return ("Triangle", area);
+        }
+    }
+}
+
+# --- ۱۳. استفاده از try/catch شبیه سازی شده ---
+def safe_array_access<T>(arr: Array<T>, index: number) -> Option<T> {
+    if (index < 0 || index >= arr.length) {
+        return Option.None;
+    }
+    return Option.Some(arr[index]);
+}
+
+def process_array_safely<T>(arr: Array<T>, index: number) -> string {
+    match safe_array_access(arr, index) {
+        case Option.Some(value) => {
+            return "Found value: " + value;
+        }
+        case Option.None => {
+            return "Index out of bounds";
+        }
+    }
+}
+
+# --- ۱۴. توابع با نوع‌های جنریک ---
+def map_array<T, U>(arr: Array<T>, func: fn(T) -> U) -> Array<U> {
+    mut result: Array<U> = [];
+    
+    for (item in arr) {
+        result.push(func(item));
+    }
+    
+    return result;
+}
+
+def filter_array<T>(arr: Array<T>, predicate: fn(T) -> boolean) -> Array<T> {
+    mut result: Array<T> = [];
+    
+    for (item in arr) {
+        if (predicate(item)) {
+            result.push(item);
+        }
+    }
+    
+    return result;
+}
+
+def find_first<T>(arr: Array<T>, predicate: fn(T) -> boolean) -> Option<T> {
+    for (item in arr) {
+        if (predicate(item)) {
+            return Option.Some(item);
+        }
+    }
+    return Option.None;
+}
+
+# --- ۱۵. برنامه اصلی و تست تمام ویژگی‌ها ---
+def main() -> void {
+    print("=== Plix Complete Syntax Demo ===");
+    
+    # Test basic operations
+    print("Basic operations:");
+    print("x + y = ", add(x, y));
+    print("Factorial of 5 = ", factorial(5));
+    print("Greeting: ", greet(name));
+    
+    # Test classes and inheritance
+    print("\nClasses and inheritance:");
+    mut circle = Circle(5.0, "red");
+    mut rect = Rectangle(4.0, 3.0, "blue");
+    
+    print("Circle area: ", circle.area());
+    print("Circle circumference: ", circle.circumference());
+    print("Rectangle area: ", rect.area());
+    print("Rectangle perimeter: ", rect.perimeter());
+    
+    # Test enums and pattern matching
+    print("\nEnums and pattern matching:");
+    print("Shape description: ", describe_shape(ShapeType.Circle(3.0)));
+    print("Rectangle description: ", describe_shape(ShapeType.Rectangle(4.0, 5.0)));
+    
+    # Test error handling
+    print("\nError handling:");
+    print("Safe divide (10/2): ", handle_result(safe_divide(10, 2)));
+    print("Safe divide (10/0): ", handle_result(safe_divide(10, 0)));
+    print("Safe sqrt (16): ", handle_result(safe_sqrt(16)));
+    print("Safe sqrt (-4): ", handle_result(safe_sqrt(-4)));
+    
+    # Test complex calculations
+    print("\nComplex calculations:");
+    print("Complex calc (16, 2): ", handle_complex_calculation(16, 2));
+    print("Complex calc (16, 0): ", handle_complex_calculation(16, 0));
+    
+    # Test arrays and higher-order functions
+    print("\nArrays and higher-order functions:");
+    mut numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    print("Original numbers: ", numbers);
+    
+    mut squares = apply_function(numbers, fn(x: number) -> number { return x * x; });
+    print("Squares: ", squares);
+    
+    mut evens = filter_numbers(numbers, fn(x: number) -> boolean { return x % 2 == 0; });
+    print("Even numbers: ", evens);
+    
+    # Test generic functions
+    print("\nGeneric functions:");
+    mut strings = ["hello", "world", "plix"];
+    mut lengths = map_array(strings, fn(s: string) -> number { return s.length; });
+    print("String lengths: ", lengths);
+    
+    # Test option handling
+    print("\nOption handling:");
+    print("Array access [2]: ", process_array_safely(numbers, 2));
+    print("Array access [15]: ", process_array_safely(numbers, 15));
+    
+    # Test default parameters
+    print("\nDefault parameters:");
+    print("Greeting: ", greet_person("Alice"));
+    print("Greeting with custom: ", greet_person("Bob", "Hi"));
+    print("Greeting with all: ", greet_person("Charlie", "Hey", "?"));
+    
+    print("\n=== Demo completed successfully! ===");
+}
+
+# Call main function
+main();

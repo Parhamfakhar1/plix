@@ -1,0 +1,155 @@
+# Advanced Plix Features Demo
+# نشان‌دهندهٔ ویژگی‌های پیشرفته زبان Plix
+
+# --- ۱. سیستم نوع‌های پیشرفته ---
+type Point = (number, number);
+type Rectangle = { x: number, y: number, width: number, height: number };
+type Shape = Circle | Rectangle | Triangle;
+
+type Circle = {
+    center: Point,
+    radius: number
+};
+
+type Triangle = {
+    a: Point,
+    b: Point,
+    c: Point
+};
+
+# --- ۲. توابع جنریک پیشرفته ---
+def identity<T>(value: T) -> T {
+    return value;
+}
+
+def swap<T, U>(a: T, b: U) -> (U, T) {
+    return (b, a);
+}
+
+def compose<T, U, V>(f: fn(U) -> V, g: fn(T) -> U) -> fn(T) -> V {
+    return fn(x: T) -> V {
+        return f(g(x));
+    };
+}
+
+def curry<T, U, V>(f: fn(T, U) -> V) -> fn(T) -> fn(U) -> V {
+    return fn(x: T) -> fn(U) -> V {
+        return fn(y: U) -> V {
+            return f(x, y);
+        };
+    };
+}
+
+# --- ۳. توابع Higher-Order پیشرفته ---
+def reduce<T, U>(arr: Array<T>, initial: U, reducer: fn(U, T) -> U) -> U {
+    mut result: U = initial;
+    for (item in arr) {
+        result = reducer(result, item);
+    }
+    return result;
+}
+
+def zip<T, U>(arr1: Array<T>, arr2: Array<U>) -> Array<(T, U)> {
+    mut result: Array<(T, U)> = [];
+    mut len: number = min(arr1.length, arr2.length);
+    
+    for (i in range(len)) {
+        result.push((arr1[i], arr2[i]));
+    }
+    
+    return result;
+}
+
+def flatten<T>(arr: Array<Array<T>>) -> Array<T> {
+    mut result: Array<T> = [];
+    for (subarray in arr) {
+        for (item in subarray) {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+# --- ۴. الگوهای طراحی پیشرفته ---
+# Factory Pattern
+enum ShapeType {
+    Circle,
+    Rectangle,
+    Triangle
+}
+
+def create_shape(shape_type: ShapeType, params: Object) -> Shape {
+    match shape_type {
+        case ShapeType.Circle => {
+            return {
+                center: (params.x, params.y),
+                radius: params.radius
+            };
+        }
+        case ShapeType.Rectangle => {
+            return {
+                x: params.x,
+                y: params.y,
+                width: params.width,
+                height: params.height
+            };
+        }
+        case ShapeType.Triangle => {
+            return {
+                a: (params.ax, params.ay),
+                b: (params.bx, params.by),
+                c: (params.cx, params.cy)
+            };
+        }
+    }
+}
+
+# Strategy Pattern
+type SortStrategy = fn(Array<number>) -> Array<number>;
+
+def bubble_sort(arr: Array<number>) -> Array<number> {
+    mut result: Array<number> = arr.copy();
+    mut n: number = result.length;
+    
+    for (i in range(n)) {
+        for (j in range(0, n - i - 1)) {
+            if (result[j] > result[j + 1]) {
+                mut temp: number = result[j];
+                result[j] = result[j + 1];
+                result[j + 1] = temp;
+            }
+        }
+    }
+    
+    return result;
+}
+
+def quick_sort(arr: Array<number>) -> Array<number> {
+    if (arr.length <= 1) {
+        return arr;
+    }
+    
+    mut pivot: number = arr[arr.length / 2];
+    mut left: Array<number> = [];
+    mut middle: Array<number> = [];
+    mut right: Array<number> = [];
+    
+    for (num in arr) {
+        if (num < pivot) {
+            left.push(num);
+        } else if (num == pivot) {
+            middle.push(num);
+        } else {
+            right.push(num);
+        }
+    }
+    
+    return quick_sort(left) + middle + quick_sort(right);
+}
+
+def sort_array(arr: Array<number>, strategy: SortStrategy) -> Array<number> {
+    return strategy(arr);
+}
+
+# --- ۵. Exception Handling پیشرفته ---
+enum ErrorCode {

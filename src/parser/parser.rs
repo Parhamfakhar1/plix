@@ -35,10 +35,18 @@ impl Parser {
             }
             
             if let Some(stmt) = self.parse_statement()? {
-                statements.push(stmt);
+                // Only require semicolon for non-expression statements
+                match &stmt {
+                    Statement::Expression(_, _) => {
+                        // Expressions don't need semicolons
+                    },
+                    _ => {
+                        // Other statements require semicolons
+                        self.expect(TokenKind::Semicolon, ";")?;
+                    }
+                }
                 
-                // Require semicolon after statement (JavaScript style)
-                self.expect(TokenKind::Semicolon, ";")?;
+                statements.push(stmt);
             }
         }
         
@@ -92,7 +100,7 @@ impl Parser {
             self.parse_class()
                 .map(|stmt| Some(stmt))
         } else {
-            // Parse expression statement
+            // Parse expression statement - don't require semicolon for expressions
             self.parse_expression()
                 .map(|expr| {
                     let span = expr.span();

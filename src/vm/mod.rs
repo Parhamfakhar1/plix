@@ -34,6 +34,8 @@ impl VirtualMachineEnvironment {
         
         self.runtime.initialize(program)?;
         
+        self.state = VMState::Ready;
+        
         Ok(())
     }
 

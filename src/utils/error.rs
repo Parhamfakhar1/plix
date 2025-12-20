@@ -5,18 +5,6 @@ use thiserror::Error;
 pub enum LexerError {
     #[error("Unexpected character '{character}' at {position}")]
     UnexpectedCharacter { character: char, position: Position },
-
-    #[error("Unterminated string literal at {position}")]
-    UnterminatedString { position: Position },
-
-    #[error("Unterminated comment at {position}")]
-    UnterminatedComment { position: Position },
-
-    #[error("Invalid number format '{text}' at {position}")]
-    InvalidNumberFormat { text: String, position: Position },
-
-    #[error("Unknown escape sequence '\\{character}' at {position}")]
-    UnknownEscapeSequence { character: char, position: Position },
 }
 
 #[derive(Error, Debug, Clone, PartialEq)]

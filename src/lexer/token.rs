@@ -57,6 +57,9 @@ pub enum TokenKind {
     Semicolon, // ;
     Colon,   // :
     Question, // ?
+    Dot,     // .
+    DotDot,  // ..
+    DotDotDot, // ...
     
     // End of file
     EOF,
@@ -111,6 +114,9 @@ impl fmt::Display for TokenKind {
             TokenKind::Elif => write!(f, "'elif'"),
             TokenKind::Comment => write!(f, "'#'"),
             TokenKind::Newline => write!(f, "'\\n'"),
+            TokenKind::Dot => write!(f, "'.'"),
+            TokenKind::DotDot => write!(f, "'..'"),
+            TokenKind::DotDotDot => write!(f, "'...'"),
             TokenKind::EOF => write!(f, "EOF"),
         }
     }

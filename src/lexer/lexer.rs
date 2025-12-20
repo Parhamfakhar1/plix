@@ -40,6 +40,20 @@ impl<'a> Lexer<'a> {
         
         let token = match current_char {
             'a'..='z' | 'A'..='Z' | '_' => self.scan_identifier(),
+            '.' => {
+                self.next_char();
+                if self.peek_char() == '.' {
+                    self.next_char();
+                    if self.peek_char() == '.' {
+                        self.next_char();
+                        self.create_token(TokenKind::DotDotDot, "...")
+                    } else {
+                        self.create_token(TokenKind::DotDot, "..")
+                    }
+                } else {
+                    self.create_token(TokenKind::Dot, ".")
+                }
+            }
             '0'..='9' => self.scan_number(),
             '"' => self.scan_string()?,
             '=' => {
